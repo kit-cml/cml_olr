@@ -24,10 +24,10 @@ cell_models_1 <- c("ORD")
 cell_models_2 <- c("ORD")
 
 # Declare the file paths
-filepath_training_ORD <- "../data/4. dynamic_hERG_chantest/metrics_chantest_training_4_cmax.csv"
-filepath_testing_ORD <- "../data/4. dynamic_hERG_chantest/metrics_chantest_testing_4_cmax.csv"
-filepath_training_Tomek <- "../data/0. Tomek/Tomek_train_rev.csv"
-filepath_testing_Tomek <- "../data/0. Tomek/Tomek_test_rev.csv"
+filepath_training_ORD <- "data_par/metrics_chantest_training_4_cmax.csv"
+filepath_testing_ORD <- "data_par/metrics_chantest_testing_4_cmax.csv"
+filepath_training_Tomek <- "data_par/Tomek_train_rev.csv"
+filepath_testing_Tomek <- "data_par/Tomek_test_rev.csv"
 
 # Set the number of tests
 num_tests <- 10
