@@ -77,12 +77,7 @@ run_all <- function(training_1 = 'trainingdf_1',testing_1 = 'testingdf_1',
   ordinaldf_test$label <- as.integer(factor(ordinaldf_test$label, levels = levels, labels = values))
   ordinaldf$label <- as.factor(ordinaldf$label)
   ordinaldf_test$label <- as.factor(ordinaldf_test$label)
-  
-  # Check the column index
-  # idx_model_1 <- as.integer(which(colnames(ordinaldf) == feature_model_1))
-  # idx_model_2 <- as.integer(which(colnames(ordinaldf) == feature_model_2))
-  # idx_label <- as.integer(which(colnames(ordinaldf) == "label"))
-  
+
   # Remove errors
   ordinaldf <- na.omit(ordinaldf)
   ordinaldf_test <- na.omit(ordinaldf_test)
@@ -182,8 +177,10 @@ run_all <- function(training_1 = 'trainingdf_1',testing_1 = 'testingdf_1',
       th1 <- (c2_tms - c1_tms) / 2.0
       th2 <- (c1_tms - c2_tms) / 2.0
     } else {
-      th1 <- -log(exp(-alpha1) - 2.0 * exp(-alpha2))/beta1
-      th2 <- -log(exp(-alpha1) * exp(-alpha2) / (exp(-alpha1) - 2.0 * exp(-alpha2))) / beta1
+      # th1 <- -log(exp(-alpha1) - 2.0 * exp(-alpha2))/beta1
+      # th2 <- -log(exp(-alpha1) * exp(-alpha2) / (exp(-alpha1) - 2.0 * exp(-alpha2))) / beta1
+      th1 <- - 1.0 / beta1 * (- alpha1 + log(1.0 - 2.0 * exp(alpha1 - alpha2)))
+      th2 <- 1.0 / beta1 * (alpha1 + log(exp(alpha2 - alpha1) - 2.0))
     }
     
     # Plot TMS for training dataset
