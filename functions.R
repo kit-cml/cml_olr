@@ -91,7 +91,7 @@ run_all <- function(training_1 = 'trainingdf_1',testing_1 = 'testingdf_1',
   if (!is_single) {
     formula_string <- paste("label~", feature_model_1, "+", feature_model_2, sep = "")
   } else {
-    formula_string <- paste("label~", feature, sep = "")
+    formula_string <- paste("label~", feature_1, sep = "")
   }
   formula <- as.formula(formula_string)
   
@@ -194,8 +194,8 @@ run_all <- function(training_1 = 'trainingdf_1',testing_1 = 'testingdf_1',
       filename_testing <- paste(feature_model_1,feature_model_2,"testing_dataset_tms.jpg",sep = "_")
     } else {
       tms_name <- feature_1
-      filename_training <- paste(feature,"training_dataset.jpg",sep = "_")
-      filename_testing <- paste(feature,"testing_dataset.jpg",sep = "_")
+      filename_training <- paste(feature_1,"training_dataset.jpg",sep = "_")
+      filename_testing <- paste(feature_1,"testing_dataset.jpg",sep = "_")
     }
     tmsplotfun(data = ordinaldf, 
                th1 = th1, 
@@ -330,19 +330,29 @@ run_all <- function(training_1 = 'trainingdf_1',testing_1 = 'testingdf_1',
     }
   } # i-th test
   
+  # Calculate the classification error from the whole training dataset
+  predicted_labels_training <- predict(mod, newdata = ordinaldf, type = "class")
+  pred_err_training <- (abs(as.integer(predicted_labels_training) - as.integer(ordinaldf$label)))
+  
   # Calculate the classification error from the whole testing dataset
-  predicted_labels <- predict(mod, newdata = ordinaldf_test, type = "class")
-  pred_err <- (abs(as.integer(predicted_labels) - as.integer(ordinaldf_test$label)))
+  predicted_labels_testing <- predict(mod, newdata = ordinaldf_test, type = "class")
+  pred_err_testing <- (abs(as.integer(predicted_labels_testing) - as.integer(ordinaldf_test$label)))
   
   # Calculate the metrics for the whole dataset
   ordinaldf["is_training"] = as.integer(1)
   ordinaldf_test["is_training"] = as.integer(0)
-  metrics_whole_data <- metricsfun(training_data = ordinaldf, 
-                                   test_data = ordinaldf_test,
+  metrics_training_data <- metricsfun(training_data = ordinaldf, 
+                                   test_data = ordinaldf,
                                    mod = mod,
                                    label_values = values,
                                    tms_name = tms_name,
                                    is_whole = TRUE)
+  metrics_testing_data <- metricsfun(training_data = ordinaldf, 
+                                     test_data = ordinaldf_test,
+                                     mod = mod,
+                                     label_values = values,
+                                     tms_name = tms_name,
+                                     is_whole = TRUE)
   
   if (!is_single) {
     # Save the metrics dataframe
@@ -480,9 +490,9 @@ run_all <- function(training_1 = 'trainingdf_1',testing_1 = 'testingdf_1',
                 quantile(metrics$F1score_class_3, 0.975)),
         logfile)
   write(sprintf('Classification error: %.2f (%.2f, %.2f)',
-                mean(pred_err),
-                mean(pred_err) - 1.96 * sd(pred_err) / sqrt(nrow(ordinaldf_test)),
-                mean(pred_err) + 1.96 * sd(pred_err) / sqrt(nrow(ordinaldf_test))),
+                mean(pred_err_testing),
+                mean(pred_err_testing) - 1.96 * sd(pred_err_testing) / sqrt(nrow(ordinaldf_test)),
+                mean(pred_err_testing) + 1.96 * sd(pred_err_testing) / sqrt(nrow(ordinaldf_test))),
         logfile)
   write(sprintf('Pairwise classification accuracy: %.2f (%.2f, %.2f)',
                 median(metrics$Pairwise),
@@ -491,30 +501,61 @@ run_all <- function(training_1 = 'trainingdf_1',testing_1 = 'testingdf_1',
         logfile)
 
   write("==============================",logfile)
+  write("Metrics for whole training data",logfile)
+  write("==============================",logfile)
+  write(sprintf('AUC of low risk: %.2f',metrics_training_data$AUC_Class_1),logfile)
+  write(sprintf('AUC of intermediate risk: %.2f',metrics_training_data$AUC_Class_2),logfile)
+  write(sprintf('AUC of high risk: %.2f',metrics_training_data$AUC_Class_3),logfile)
+  write(sprintf('Accuracy of low risk: %.2f',metrics_training_data$Accuracy_Class_1),logfile)
+  write(sprintf('Accuracy of intermediate risk: %.2f',metrics_training_data$Accuracy_Class_2),logfile)
+  write(sprintf('Accuracy of high risk: %.2f',metrics_training_data$Accuracy_Class_3),logfile)
+  write(sprintf('Sensitivity of low risk: %.2f',metrics_training_data$Sensitivity_class_1),logfile)
+  write(sprintf('Sensitivity of intermediate risk: %.2f',metrics_training_data$Sensitivity_class_2),logfile)
+  write(sprintf('Sensitivity of high risk: %.2f',metrics_training_data$Sensitivity_class_3),logfile)
+  write(sprintf('Specificity of low risk: %.2f',metrics_training_data$Specificity_class_1),logfile)
+  write(sprintf('Specificity of intermediate risk: %.2f',metrics_training_data$Specificity_class_2),logfile)
+  write(sprintf('Specificity of high risk: %.2f',metrics_training_data$Specificity_class_3),logfile)
+  write(sprintf('LR+ of low risk: %.2f',metrics_training_data$LR_positive_class_1),logfile)
+  write(sprintf('LR+ of intermediate risk: %.2f',metrics_training_data$LR_positive_class_2),logfile)
+  write(sprintf('LR+ of high risk: %.2f',metrics_training_data$LR_positive_class_3),logfile)
+  write(sprintf('LR- of low risk: %.2f',metrics_training_data$LR_negative_class_1),logfile)
+  write(sprintf('LR- of intermediate risk: %.2f',metrics_training_data$LR_negative_class_2),logfile)
+  write(sprintf('LR- of high risk: %.2f',metrics_training_data$LR_negative_class_3),logfile)
+  write(sprintf('F1score of low risk: %.2f',metrics_training_data$F1score_class_1),logfile)
+  write(sprintf('F1score of intermediate risk: %.2f',metrics_training_data$F1score_class_2),logfile)
+  write(sprintf('F1score of high risk: %.2f',metrics_training_data$F1score_class_3),logfile)
+  write(sprintf('Classification error: %.2f (%.2f, %.2f)',
+                mean(pred_err_training),
+                mean(pred_err_training) - 1.96 * sd(pred_err_training) / sqrt(nrow(ordinaldf)),
+                mean(pred_err_training) + 1.96 * sd(pred_err_training) / sqrt(nrow(ordinaldf))),
+        logfile)
+  write(sprintf('Pairwise classification accuracy: %.2f',metrics_training_data$Pairwise),logfile)
+  
+  write("==============================",logfile)
   write("Metrics for whole testing data",logfile)
   write("==============================",logfile)
-  write(sprintf('AUC of low risk: %.2f',metrics_whole_data$AUC_Class_1),logfile)
-  write(sprintf('AUC of intermediate risk: %.2f',metrics_whole_data$AUC_Class_2),logfile)
-  write(sprintf('AUC of high risk: %.2f',metrics_whole_data$AUC_Class_3),logfile)
-  write(sprintf('Accuracy of low risk: %.2f',metrics_whole_data$Accuracy_Class_1),logfile)
-  write(sprintf('Accuracy of intermediate risk: %.2f',metrics_whole_data$Accuracy_Class_2),logfile)
-  write(sprintf('Accuracy of high risk: %.2f',metrics_whole_data$Accuracy_Class_3),logfile)
-  write(sprintf('Sensitivity of low risk: %.2f',metrics_whole_data$Sensitivity_class_1),logfile)
-  write(sprintf('Sensitivity of intermediate risk: %.2f',metrics_whole_data$Sensitivity_class_2),logfile)
-  write(sprintf('Sensitivity of high risk: %.2f',metrics_whole_data$Sensitivity_class_3),logfile)
-  write(sprintf('Specificity of low risk: %.2f',metrics_whole_data$Specificity_class_1),logfile)
-  write(sprintf('Specificity of intermediate risk: %.2f',metrics_whole_data$Specificity_class_2),logfile)
-  write(sprintf('Specificity of high risk: %.2f',metrics_whole_data$Specificity_class_3),logfile)
-  write(sprintf('LR+ of low risk: %.2f',metrics_whole_data$LR_positive_class_1),logfile)
-  write(sprintf('LR+ of intermediate risk: %.2f',metrics_whole_data$LR_positive_class_2),logfile)
-  write(sprintf('LR+ of high risk: %.2f',metrics_whole_data$LR_positive_class_3),logfile)
-  write(sprintf('LR- of low risk: %.2f',metrics_whole_data$LR_negative_class_1),logfile)
-  write(sprintf('LR- of intermediate risk: %.2f',metrics_whole_data$LR_negative_class_2),logfile)
-  write(sprintf('LR- of high risk: %.2f',metrics_whole_data$LR_negative_class_3),logfile)
-  write(sprintf('F1score of low risk: %.2f',metrics_whole_data$F1score_class_1),logfile)
-  write(sprintf('F1score of intermediate risk: %.2f',metrics_whole_data$F1score_class_2),logfile)
-  write(sprintf('F1score of high risk: %.2f',metrics_whole_data$F1score_class_3),logfile)
-  write(sprintf('Pairwise classification accuracy: %.2f',metrics_whole_data$Pairwise),logfile)
+  write(sprintf('AUC of low risk: %.2f',metrics_testing_data$AUC_Class_1),logfile)
+  write(sprintf('AUC of intermediate risk: %.2f',metrics_testing_data$AUC_Class_2),logfile)
+  write(sprintf('AUC of high risk: %.2f',metrics_testing_data$AUC_Class_3),logfile)
+  write(sprintf('Accuracy of low risk: %.2f',metrics_testing_data$Accuracy_Class_1),logfile)
+  write(sprintf('Accuracy of intermediate risk: %.2f',metrics_testing_data$Accuracy_Class_2),logfile)
+  write(sprintf('Accuracy of high risk: %.2f',metrics_testing_data$Accuracy_Class_3),logfile)
+  write(sprintf('Sensitivity of low risk: %.2f',metrics_testing_data$Sensitivity_class_1),logfile)
+  write(sprintf('Sensitivity of intermediate risk: %.2f',metrics_testing_data$Sensitivity_class_2),logfile)
+  write(sprintf('Sensitivity of high risk: %.2f',metrics_testing_data$Sensitivity_class_3),logfile)
+  write(sprintf('Specificity of low risk: %.2f',metrics_testing_data$Specificity_class_1),logfile)
+  write(sprintf('Specificity of intermediate risk: %.2f',metrics_testing_data$Specificity_class_2),logfile)
+  write(sprintf('Specificity of high risk: %.2f',metrics_testing_data$Specificity_class_3),logfile)
+  write(sprintf('LR+ of low risk: %.2f',metrics_testing_data$LR_positive_class_1),logfile)
+  write(sprintf('LR+ of intermediate risk: %.2f',metrics_testing_data$LR_positive_class_2),logfile)
+  write(sprintf('LR+ of high risk: %.2f',metrics_testing_data$LR_positive_class_3),logfile)
+  write(sprintf('LR- of low risk: %.2f',metrics_testing_data$LR_negative_class_1),logfile)
+  write(sprintf('LR- of intermediate risk: %.2f',metrics_testing_data$LR_negative_class_2),logfile)
+  write(sprintf('LR- of high risk: %.2f',metrics_testing_data$LR_negative_class_3),logfile)
+  write(sprintf('F1score of low risk: %.2f',metrics_testing_data$F1score_class_1),logfile)
+  write(sprintf('F1score of intermediate risk: %.2f',metrics_testing_data$F1score_class_2),logfile)
+  write(sprintf('F1score of high risk: %.2f',metrics_testing_data$F1score_class_3),logfile)
+  write(sprintf('Pairwise classification accuracy: %.2f',metrics_testing_data$Pairwise),logfile)
 
   # Close the connection to the text file
   close(logfile) 
@@ -553,7 +594,7 @@ run_all <- function(training_1 = 'trainingdf_1',testing_1 = 'testingdf_1',
     F1score_class_1 = median(metrics$F1score_class_1),
     F1score_class_2 = median(metrics$F1score_class_2),
     F1score_class_3 = median(metrics$F1score_class_3),
-    Classification_error = mean(pred_err),
+    Classification_error = mean(pred_err_testing),
     Pairwise_classification_accuracy = median(metrics$Pairwise)
   )
   
@@ -834,6 +875,6 @@ solvecellpair <- function(pair_id,
                     training_2,testing_2,
                     feature_1,feature_2,
                     cell_model_1,cell_model_2,
-                    num_tests)
+                    num_tests,is_single = FALSE)
   return(resultdf)
 }
