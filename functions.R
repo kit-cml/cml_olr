@@ -381,6 +381,10 @@ run_all <- function(training_1 = 'trainingdf_1',testing_1 = 'testingdf_1',
   # Close the connection to the text file
   close(logfile) 
   
+  rank_score <- rankscorefun(metrics = metrics, 
+                             pred_error = pred_err_testing, 
+                             is_normalized = TRUE)
+  
   # Store summary of metrics to summarydf
   if (!is_single) {
     feature_pair_name <- paste(feature_model_1,feature_model_2,sep = "_")
@@ -416,7 +420,8 @@ run_all <- function(training_1 = 'trainingdf_1',testing_1 = 'testingdf_1',
     F1score_class_2 = median(metrics$F1score_class_2),
     F1score_class_3 = median(metrics$F1score_class_3),
     Classification_error = mean(pred_err_testing),
-    Pairwise_classification_accuracy = median(metrics$Pairwise)
+    Pairwise_classification_accuracy = median(metrics$Pairwise),
+    Rank_score = rank_score
   )
   
   return(summarydf)
@@ -895,4 +900,143 @@ writemetricsfun <- function(metrics,
   write(sprintf('F1score of intermediate risk: %.2f',metrics_testing_data$F1score_class_2),logfile)
   write(sprintf('F1score of high risk: %.2f',metrics_testing_data$F1score_class_3),logfile)
   write(sprintf('Pairwise classification accuracy: %.2f',metrics_testing_data$Pairwise),logfile)
+}
+
+rankscorefun <- function(metrics,
+                         pred_error,
+                         is_normalized = TRUE){
+  Performance_measures <- c("AUC_Class_1", "AUC_Class_3",
+                            "LR_positive_class_1", "LR_positive_class_3",
+                            "LR_negative_class_1", "LR_negative_class_3",
+                            "Pairwise","Classification_error")
+  Performance_levels <- c("Excellent_performance", 
+                          "Good_performance",
+                          "Minimally_acceptable_performance",
+                          "Not_acceptabel")
+  
+  # A dataframe for the weights of performance measures
+  pm_df <- data.frame(
+    Performance_measure = Performance_measures,
+    Weight = c(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0)
+  )
+
+  # A dataframe for the weights of performance levels
+  pl_df <- data.frame(
+    Performance_level = Performance_levels,
+    Weight = c(3.0, 2.0, 1.0, 0.0)
+  )
+  if (is_normalized) {
+    pm_df$Weight <- pm_df$Weight / sum(pm_df$Weight)
+    pl_df$Weight <- pl_df$Weight / max(pl_df$Weight)
+  }
+  
+  # Initialize the performance dataframe for the model
+  model_df <- data.frame(
+    Performance_measure = Performance_measures,
+    Performance_level_weight = c(NA, NA, NA, NA, NA, NA, NA, NA)
+  )
+  
+  # Check the performance level for each performance measure 
+  # by looking at the 95% confidence interval that match the CiPA's criteria
+  
+  # AUC_Class_1
+  score_to_check <- quantile(metrics$AUC_Class_1, 0.025)
+  if (score_to_check < 0.7) {
+    model_df[model_df$Performance_measure == "AUC_Class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
+  } else if (score_to_check >= 0.7 & score_to_check < 0.8) {
+    model_df[model_df$Performance_measure == "AUC_Class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Minimally_acceptable_performance",]$Weight
+  } else if (score_to_check >= 0.8 & score_to_check < 0.9) {
+    model_df[model_df$Performance_measure == "AUC_Class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Good_performance",]$Weight
+  } else {
+    model_df[model_df$Performance_measure == "AUC_Class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Excellent_performance",]$Weight
+  }
+  
+  # AUC_Class_3
+  score_to_check <- quantile(metrics$AUC_Class_3, 0.025)
+  if (score_to_check < 0.7) {
+    model_df[model_df$Performance_measure == "AUC_Class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
+  } else if (score_to_check >= 0.7 & score_to_check < 0.8) {
+    model_df[model_df$Performance_measure == "AUC_Class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Minimally_acceptable_performance",]$Weight
+  } else if (score_to_check >= 0.8 & score_to_check < 0.9) {
+    model_df[model_df$Performance_measure == "AUC_Class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Good_performance",]$Weight
+  } else {
+    model_df[model_df$Performance_measure == "AUC_Class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Excellent_performance",]$Weight
+  }
+  
+  # LR_positive_class_1
+  score_to_check <- quantile(metrics$LR_positive_class_1, 0.025)
+  if (score_to_check < 2.0) {
+    model_df[model_df$Performance_measure == "LR_positive_class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
+  } else if (score_to_check >= 2.0 & score_to_check < 5.0) {
+    model_df[model_df$Performance_measure == "LR_positive_class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Minimally_acceptable_performance",]$Weight
+  } else if (score_to_check >= 5.0 & score_to_check < 10.0) {
+    model_df[model_df$Performance_measure == "LR_positive_class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Good_performance",]$Weight
+  } else {
+    model_df[model_df$Performance_measure == "LR_positive_class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Excellent_performance",]$Weight
+  }
+  
+  # LR_positive_class_3
+  score_to_check <- quantile(metrics$LR_positive_class_3, 0.025)
+  if (score_to_check < 2.0) {
+    model_df[model_df$Performance_measure == "LR_positive_class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
+  } else if (score_to_check >= 2.0 & score_to_check < 5.0) {
+    model_df[model_df$Performance_measure == "LR_positive_class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Minimally_acceptable_performance",]$Weight
+  } else if (score_to_check >= 5.0 & score_to_check < 10.0) {
+    model_df[model_df$Performance_measure == "LR_positive_class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Good_performance",]$Weight
+  } else {
+    model_df[model_df$Performance_measure == "LR_positive_class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Excellent_performance",]$Weight
+  }
+  
+  # LR_negative_class_1
+  score_to_check <- quantile(metrics$LR_negative_class_1, 0.975)
+  if (score_to_check > 0.5) {
+    model_df[model_df$Performance_measure == "LR_negative_class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
+  } else if (score_to_check <= 0.5 & score_to_check > 0.2) {
+    model_df[model_df$Performance_measure == "LR_negative_class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Minimally_acceptable_performance",]$Weight
+  } else if (score_to_check <= 0.2 & score_to_check > 0.1) {
+    model_df[model_df$Performance_measure == "LR_negative_class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Good_performance",]$Weight
+  } else {
+    model_df[model_df$Performance_measure == "LR_negative_class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Excellent_performance",]$Weight
+  }
+  
+  # LR_negative_class_3
+  score_to_check <- quantile(metrics$LR_negative_class_3, 0.975)
+  if (score_to_check > 0.5) {
+    model_df[model_df$Performance_measure == "LR_negative_class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
+  } else if (score_to_check <= 0.5 & score_to_check > 0.2) {
+    model_df[model_df$Performance_measure == "LR_negative_class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Minimally_acceptable_performance",]$Weight
+  } else if (score_to_check <= 0.2 & score_to_check > 0.1) {
+    model_df[model_df$Performance_measure == "LR_negative_class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Good_performance",]$Weight
+  } else {
+    model_df[model_df$Performance_measure == "LR_negative_class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Excellent_performance",]$Weight
+  }
+  
+  # Pairwise
+  score_to_check <- quantile(metrics$Pairwise, 0.025)
+  if (score_to_check < 0.7) {
+    model_df[model_df$Performance_measure == "Pairwise",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
+  } else if (score_to_check >= 0.7 & score_to_check < 0.8) {
+    model_df[model_df$Performance_measure == "Pairwise",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Minimally_acceptable_performance",]$Weight
+  } else if (score_to_check >= 0.8 & score_to_check < 0.9) {
+    model_df[model_df$Performance_measure == "Pairwise",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Good_performance",]$Weight
+  } else {
+    model_df[model_df$Performance_measure == "Pairwise",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Excellent_performance",]$Weight
+  }
+  
+  # Classification_error
+  score_to_check <- mean(pred_error) + 1.96 * sd(pred_error) / sqrt(length(pred_error))
+  if (score_to_check > 1.0) {
+    model_df[model_df$Performance_measure == "Classification_error",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
+  } else if (score_to_check <= 1.0 & score_to_check > 0.5) {
+    model_df[model_df$Performance_measure == "Classification_error",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Minimally_acceptable_performance",]$Weight
+  } else if (score_to_check <= 0.5 & score_to_check > 0.3) {
+    model_df[model_df$Performance_measure == "Classification_error",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Good_performance",]$Weight
+  } else {
+    model_df[model_df$Performance_measure == "Classification_error",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Excellent_performance",]$Weight
+  }
+  
+  # Calculate rank score
+  rank_score <- model_df$Performance_level_weight %*% pm_df$Weight
+  
+  return(as.numeric(rank_score))
 }
