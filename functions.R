@@ -368,192 +368,16 @@ run_all <- function(training_1 = 'trainingdf_1',testing_1 = 'testingdf_1',
     write.csv(drugs_predict, paste(feature_1,"drugs_predict.csv",sep = "_"), row.names = FALSE)
   }
   
-  if (is_single) {
-    # Print the Thresholds into logfile
-    write("=======================",logfile)
-    write(sprintf("TMS thresholds"),logfile)
-    write("=======================",logfile)
-    write(paste(sprintf('Threshold_1: %.4f ', th1)), logfile)
-    write(paste(sprintf('Threshold_2: %.4f ', th2)), logfile)
-  }
-  
-  # Print the metrics dataframe into logfile
-  write("=======================",logfile)
-  write(sprintf("Metrics for %d test",num_tests),logfile)
-  write("=======================",logfile)
-  write(sprintf('AUC of low risk: %.2f (%.2f, %.2f)',
-                      median(metrics$AUC_Class_1),
-                      quantile(metrics$AUC_Class_1, 0.025),
-                      quantile(metrics$AUC_Class_1, 0.975)),
-        logfile)
-  write(sprintf('AUC of intermediate risk: %.2f (%.2f, %.2f)',
-                median(metrics$AUC_Class_2),
-                quantile(metrics$AUC_Class_2, 0.025),
-                quantile(metrics$AUC_Class_2, 0.975)),
-        logfile)
-  write(sprintf('AUC of high risk: %.2f (%.2f, %.2f)',
-                median(metrics$AUC_Class_3),
-                quantile(metrics$AUC_Class_3, 0.025),
-                quantile(metrics$AUC_Class_3, 0.975)),
-        logfile)
-  write(sprintf('Accuracy of low risk: %.2f (%.2f, %.2f)',
-                median(metrics$Accuracy_Class_1),
-                quantile(metrics$Accuracy_Class_1, 0.025),
-                quantile(metrics$Accuracy_Class_1, 0.975)),
-        logfile)
-  write(sprintf('Accuracy of intermediate risk: %.2f (%.2f, %.2f)',
-                median(metrics$Accuracy_Class_2),
-                quantile(metrics$Accuracy_Class_2, 0.025),
-                quantile(metrics$Accuracy_Class_2, 0.975)),
-        logfile)
-  write(sprintf('Accuracy of high risk: %.2f (%.2f, %.2f)',
-                median(metrics$Accuracy_Class_3),
-                quantile(metrics$Accuracy_Class_3, 0.025),
-                quantile(metrics$Accuracy_Class_3, 0.975)),
-        logfile)
-  write(sprintf('Sensitivity of low risk: %.2f (%.2f, %.2f)',
-                median(metrics$Sensitivity_class_1),
-                quantile(metrics$Sensitivity_class_1, 0.025),
-                quantile(metrics$Sensitivity_class_1, 0.975)),
-        logfile)
-  write(sprintf('Sensitivity of intermediate risk: %.2f (%.2f, %.2f)',
-                median(metrics$Sensitivity_class_2),
-                quantile(metrics$Sensitivity_class_2, 0.025),
-                quantile(metrics$Sensitivity_class_2, 0.975)),
-        logfile)
-  write(sprintf('Sensitivity of high risk: %.2f (%.2f, %.2f)',
-                median(metrics$Sensitivity_class_3),
-                quantile(metrics$Sensitivity_class_3, 0.025),
-                quantile(metrics$Sensitivity_class_3, 0.975)),
-        logfile)
-  write(sprintf('Specificity of low risk: %.2f (%.2f, %.2f)',
-                median(metrics$Specificity_class_1),
-                quantile(metrics$Specificity_class_1, 0.025),
-                quantile(metrics$Specificity_class_1, 0.975)),
-        logfile)
-  write(sprintf('Specificity of intermediate risk: %.2f (%.2f, %.2f)',
-                median(metrics$Specificity_class_2),
-                quantile(metrics$Specificity_class_2, 0.025),
-                quantile(metrics$Specificity_class_2, 0.975)),
-        logfile)
-  write(sprintf('Specificity of high risk: %.2f (%.2f, %.2f)',
-                median(metrics$Specificity_class_3),
-                quantile(metrics$Specificity_class_3, 0.025),
-                quantile(metrics$Specificity_class_3, 0.975)),
-        logfile)
-  write(sprintf('LR+ of low risk: %.2f (%.2f, %.2f)',
-                median(metrics$LR_positive_class_1),
-                quantile(metrics$LR_positive_class_1, 0.025),
-                quantile(metrics$LR_positive_class_1, 0.975)),
-        logfile)
-  write(sprintf('LR+ of intermediate risk: %.2f (%.2f, %.2f)',
-                median(metrics$LR_positive_class_2),
-                quantile(metrics$LR_positive_class_2, 0.025),
-                quantile(metrics$LR_positive_class_2, 0.975)),
-        logfile)
-  write(sprintf('LR+ of high risk: %.2f (%.2f, %.2f)',
-                median(metrics$LR_positive_class_3),
-                quantile(metrics$LR_positive_class_3, 0.025),
-                quantile(metrics$LR_positive_class_3, 0.975)),
-        logfile)
-  write(sprintf('LR- of low risk: %.2f (%.2f, %.2f)',
-                median(metrics$LR_negative_class_1),
-                quantile(metrics$LR_negative_class_1, 0.025),
-                quantile(metrics$LR_negative_class_1, 0.975)),
-        logfile)
-  write(sprintf('LR- of intermediate risk: %.2f (%.2f, %.2f)',
-                median(metrics$LR_negative_class_2),
-                quantile(metrics$LR_negative_class_2, 0.025),
-                quantile(metrics$LR_negative_class_2, 0.975)),
-        logfile)
-  write(sprintf('LR- of high risk: %.2f (%.2f, %.2f)',
-                median(metrics$LR_negative_class_3),
-                quantile(metrics$LR_negative_class_3, 0.025),
-                quantile(metrics$LR_negative_class_3, 0.975)),
-        logfile)
-  write(sprintf('F1score of low risk: %.2f (%.2f, %.2f)',
-                median(metrics$F1score_class_1),
-                quantile(metrics$F1score_class_1, 0.025),
-                quantile(metrics$F1score_class_1, 0.975)),
-        logfile)
-  write(sprintf('F1score of intermediate risk: %.2f (%.2f, %.2f)',
-                median(metrics$F1score_class_2),
-                quantile(metrics$F1score_class_2, 0.025),
-                quantile(metrics$F1score_class_2, 0.975)),
-        logfile)
-  write(sprintf('F1score of high risk: %.2f (%.2f, %.2f)',
-                median(metrics$F1score_class_3),
-                quantile(metrics$F1score_class_3, 0.025),
-                quantile(metrics$F1score_class_3, 0.975)),
-        logfile)
-  write(sprintf('Classification error: %.2f (%.2f, %.2f)',
-                mean(pred_err_testing),
-                mean(pred_err_testing) - 1.96 * sd(pred_err_testing) / sqrt(nrow(ordinaldf_test)),
-                mean(pred_err_testing) + 1.96 * sd(pred_err_testing) / sqrt(nrow(ordinaldf_test))),
-        logfile)
-  write(sprintf('Pairwise classification accuracy: %.2f (%.2f, %.2f)',
-                median(metrics$Pairwise),
-                quantile(metrics$Pairwise, 0.025),
-                quantile(metrics$Pairwise, 0.975)),
-        logfile)
-
-  write("==============================",logfile)
-  write("Metrics for whole training data",logfile)
-  write("==============================",logfile)
-  write(sprintf('AUC of low risk: %.2f',metrics_training_data$AUC_Class_1),logfile)
-  write(sprintf('AUC of intermediate risk: %.2f',metrics_training_data$AUC_Class_2),logfile)
-  write(sprintf('AUC of high risk: %.2f',metrics_training_data$AUC_Class_3),logfile)
-  write(sprintf('Accuracy of low risk: %.2f',metrics_training_data$Accuracy_Class_1),logfile)
-  write(sprintf('Accuracy of intermediate risk: %.2f',metrics_training_data$Accuracy_Class_2),logfile)
-  write(sprintf('Accuracy of high risk: %.2f',metrics_training_data$Accuracy_Class_3),logfile)
-  write(sprintf('Sensitivity of low risk: %.2f',metrics_training_data$Sensitivity_class_1),logfile)
-  write(sprintf('Sensitivity of intermediate risk: %.2f',metrics_training_data$Sensitivity_class_2),logfile)
-  write(sprintf('Sensitivity of high risk: %.2f',metrics_training_data$Sensitivity_class_3),logfile)
-  write(sprintf('Specificity of low risk: %.2f',metrics_training_data$Specificity_class_1),logfile)
-  write(sprintf('Specificity of intermediate risk: %.2f',metrics_training_data$Specificity_class_2),logfile)
-  write(sprintf('Specificity of high risk: %.2f',metrics_training_data$Specificity_class_3),logfile)
-  write(sprintf('LR+ of low risk: %.2f',metrics_training_data$LR_positive_class_1),logfile)
-  write(sprintf('LR+ of intermediate risk: %.2f',metrics_training_data$LR_positive_class_2),logfile)
-  write(sprintf('LR+ of high risk: %.2f',metrics_training_data$LR_positive_class_3),logfile)
-  write(sprintf('LR- of low risk: %.2f',metrics_training_data$LR_negative_class_1),logfile)
-  write(sprintf('LR- of intermediate risk: %.2f',metrics_training_data$LR_negative_class_2),logfile)
-  write(sprintf('LR- of high risk: %.2f',metrics_training_data$LR_negative_class_3),logfile)
-  write(sprintf('F1score of low risk: %.2f',metrics_training_data$F1score_class_1),logfile)
-  write(sprintf('F1score of intermediate risk: %.2f',metrics_training_data$F1score_class_2),logfile)
-  write(sprintf('F1score of high risk: %.2f',metrics_training_data$F1score_class_3),logfile)
-  write(sprintf('Classification error: %.2f (%.2f, %.2f)',
-                mean(pred_err_training),
-                mean(pred_err_training) - 1.96 * sd(pred_err_training) / sqrt(nrow(ordinaldf)),
-                mean(pred_err_training) + 1.96 * sd(pred_err_training) / sqrt(nrow(ordinaldf))),
-        logfile)
-  write(sprintf('Pairwise classification accuracy: %.2f',metrics_training_data$Pairwise),logfile)
-  
-  write("==============================",logfile)
-  write("Metrics for whole testing data",logfile)
-  write("==============================",logfile)
-  write(sprintf('AUC of low risk: %.2f',metrics_testing_data$AUC_Class_1),logfile)
-  write(sprintf('AUC of intermediate risk: %.2f',metrics_testing_data$AUC_Class_2),logfile)
-  write(sprintf('AUC of high risk: %.2f',metrics_testing_data$AUC_Class_3),logfile)
-  write(sprintf('Accuracy of low risk: %.2f',metrics_testing_data$Accuracy_Class_1),logfile)
-  write(sprintf('Accuracy of intermediate risk: %.2f',metrics_testing_data$Accuracy_Class_2),logfile)
-  write(sprintf('Accuracy of high risk: %.2f',metrics_testing_data$Accuracy_Class_3),logfile)
-  write(sprintf('Sensitivity of low risk: %.2f',metrics_testing_data$Sensitivity_class_1),logfile)
-  write(sprintf('Sensitivity of intermediate risk: %.2f',metrics_testing_data$Sensitivity_class_2),logfile)
-  write(sprintf('Sensitivity of high risk: %.2f',metrics_testing_data$Sensitivity_class_3),logfile)
-  write(sprintf('Specificity of low risk: %.2f',metrics_testing_data$Specificity_class_1),logfile)
-  write(sprintf('Specificity of intermediate risk: %.2f',metrics_testing_data$Specificity_class_2),logfile)
-  write(sprintf('Specificity of high risk: %.2f',metrics_testing_data$Specificity_class_3),logfile)
-  write(sprintf('LR+ of low risk: %.2f',metrics_testing_data$LR_positive_class_1),logfile)
-  write(sprintf('LR+ of intermediate risk: %.2f',metrics_testing_data$LR_positive_class_2),logfile)
-  write(sprintf('LR+ of high risk: %.2f',metrics_testing_data$LR_positive_class_3),logfile)
-  write(sprintf('LR- of low risk: %.2f',metrics_testing_data$LR_negative_class_1),logfile)
-  write(sprintf('LR- of intermediate risk: %.2f',metrics_testing_data$LR_negative_class_2),logfile)
-  write(sprintf('LR- of high risk: %.2f',metrics_testing_data$LR_negative_class_3),logfile)
-  write(sprintf('F1score of low risk: %.2f',metrics_testing_data$F1score_class_1),logfile)
-  write(sprintf('F1score of intermediate risk: %.2f',metrics_testing_data$F1score_class_2),logfile)
-  write(sprintf('F1score of high risk: %.2f',metrics_testing_data$F1score_class_3),logfile)
-  write(sprintf('Pairwise classification accuracy: %.2f',metrics_testing_data$Pairwise),logfile)
-
+  writemetricsfun(metrics = metrics, 
+                  metrics_training_data = metrics_training_data,
+                  metrics_testing_data = metrics_testing_data,
+                  pred_error_training = pred_err_training, 
+                  pred_error_testing = pred_err_testing,
+                  logfile = logfile, 
+                  is_single = is_single,
+                  th1 = th1, 
+                  th2 = th2)
+ 
   # Close the connection to the text file
   close(logfile) 
   
@@ -874,4 +698,201 @@ solvecellpair <- function(pair_id,
                     cell_model_1,cell_model_2,
                     num_tests,is_single = FALSE)
   return(resultdf)
+}
+
+writemetricsfun <- function(metrics, 
+                            metrics_training_data, 
+                            metrics_testing_data, 
+                            pred_error_training,
+                            pred_error_testing,
+                            logfile,
+                            is_single = FALSE,
+                            th1 = NA,
+                            th2 = NA){
+  
+  if (is_single) {
+    # Print the Thresholds into logfile
+    write("=======================",logfile)
+    write(sprintf("TMS thresholds"),logfile)
+    write("=======================",logfile)
+    write(paste(sprintf('Threshold_1: %.4f ', th1)), logfile)
+    write(paste(sprintf('Threshold_2: %.4f ', th2)), logfile)
+  }
+  
+  # Print the metrics dataframe into logfile
+  write("=======================",logfile)
+  write(sprintf("Metrics for %d test",num_tests),logfile)
+  write("=======================",logfile)
+  write(sprintf('AUC of low risk: %.2f (%.2f, %.2f)',
+                median(metrics$AUC_Class_1),
+                quantile(metrics$AUC_Class_1, 0.025),
+                quantile(metrics$AUC_Class_1, 0.975)),
+        logfile)
+  write(sprintf('AUC of intermediate risk: %.2f (%.2f, %.2f)',
+                median(metrics$AUC_Class_2),
+                quantile(metrics$AUC_Class_2, 0.025),
+                quantile(metrics$AUC_Class_2, 0.975)),
+        logfile)
+  write(sprintf('AUC of high risk: %.2f (%.2f, %.2f)',
+                median(metrics$AUC_Class_3),
+                quantile(metrics$AUC_Class_3, 0.025),
+                quantile(metrics$AUC_Class_3, 0.975)),
+        logfile)
+  write(sprintf('Accuracy of low risk: %.2f (%.2f, %.2f)',
+                median(metrics$Accuracy_Class_1),
+                quantile(metrics$Accuracy_Class_1, 0.025),
+                quantile(metrics$Accuracy_Class_1, 0.975)),
+        logfile)
+  write(sprintf('Accuracy of intermediate risk: %.2f (%.2f, %.2f)',
+                median(metrics$Accuracy_Class_2),
+                quantile(metrics$Accuracy_Class_2, 0.025),
+                quantile(metrics$Accuracy_Class_2, 0.975)),
+        logfile)
+  write(sprintf('Accuracy of high risk: %.2f (%.2f, %.2f)',
+                median(metrics$Accuracy_Class_3),
+                quantile(metrics$Accuracy_Class_3, 0.025),
+                quantile(metrics$Accuracy_Class_3, 0.975)),
+        logfile)
+  write(sprintf('Sensitivity of low risk: %.2f (%.2f, %.2f)',
+                median(metrics$Sensitivity_class_1),
+                quantile(metrics$Sensitivity_class_1, 0.025),
+                quantile(metrics$Sensitivity_class_1, 0.975)),
+        logfile)
+  write(sprintf('Sensitivity of intermediate risk: %.2f (%.2f, %.2f)',
+                median(metrics$Sensitivity_class_2),
+                quantile(metrics$Sensitivity_class_2, 0.025),
+                quantile(metrics$Sensitivity_class_2, 0.975)),
+        logfile)
+  write(sprintf('Sensitivity of high risk: %.2f (%.2f, %.2f)',
+                median(metrics$Sensitivity_class_3),
+                quantile(metrics$Sensitivity_class_3, 0.025),
+                quantile(metrics$Sensitivity_class_3, 0.975)),
+        logfile)
+  write(sprintf('Specificity of low risk: %.2f (%.2f, %.2f)',
+                median(metrics$Specificity_class_1),
+                quantile(metrics$Specificity_class_1, 0.025),
+                quantile(metrics$Specificity_class_1, 0.975)),
+        logfile)
+  write(sprintf('Specificity of intermediate risk: %.2f (%.2f, %.2f)',
+                median(metrics$Specificity_class_2),
+                quantile(metrics$Specificity_class_2, 0.025),
+                quantile(metrics$Specificity_class_2, 0.975)),
+        logfile)
+  write(sprintf('Specificity of high risk: %.2f (%.2f, %.2f)',
+                median(metrics$Specificity_class_3),
+                quantile(metrics$Specificity_class_3, 0.025),
+                quantile(metrics$Specificity_class_3, 0.975)),
+        logfile)
+  write(sprintf('LR+ of low risk: %.2f (%.2f, %.2f)',
+                median(metrics$LR_positive_class_1),
+                quantile(metrics$LR_positive_class_1, 0.025),
+                quantile(metrics$LR_positive_class_1, 0.975)),
+        logfile)
+  write(sprintf('LR+ of intermediate risk: %.2f (%.2f, %.2f)',
+                median(metrics$LR_positive_class_2),
+                quantile(metrics$LR_positive_class_2, 0.025),
+                quantile(metrics$LR_positive_class_2, 0.975)),
+        logfile)
+  write(sprintf('LR+ of high risk: %.2f (%.2f, %.2f)',
+                median(metrics$LR_positive_class_3),
+                quantile(metrics$LR_positive_class_3, 0.025),
+                quantile(metrics$LR_positive_class_3, 0.975)),
+        logfile)
+  write(sprintf('LR- of low risk: %.2f (%.2f, %.2f)',
+                median(metrics$LR_negative_class_1),
+                quantile(metrics$LR_negative_class_1, 0.025),
+                quantile(metrics$LR_negative_class_1, 0.975)),
+        logfile)
+  write(sprintf('LR- of intermediate risk: %.2f (%.2f, %.2f)',
+                median(metrics$LR_negative_class_2),
+                quantile(metrics$LR_negative_class_2, 0.025),
+                quantile(metrics$LR_negative_class_2, 0.975)),
+        logfile)
+  write(sprintf('LR- of high risk: %.2f (%.2f, %.2f)',
+                median(metrics$LR_negative_class_3),
+                quantile(metrics$LR_negative_class_3, 0.025),
+                quantile(metrics$LR_negative_class_3, 0.975)),
+        logfile)
+  write(sprintf('F1score of low risk: %.2f (%.2f, %.2f)',
+                median(metrics$F1score_class_1),
+                quantile(metrics$F1score_class_1, 0.025),
+                quantile(metrics$F1score_class_1, 0.975)),
+        logfile)
+  write(sprintf('F1score of intermediate risk: %.2f (%.2f, %.2f)',
+                median(metrics$F1score_class_2),
+                quantile(metrics$F1score_class_2, 0.025),
+                quantile(metrics$F1score_class_2, 0.975)),
+        logfile)
+  write(sprintf('F1score of high risk: %.2f (%.2f, %.2f)',
+                median(metrics$F1score_class_3),
+                quantile(metrics$F1score_class_3, 0.025),
+                quantile(metrics$F1score_class_3, 0.975)),
+        logfile)
+  write(sprintf('Classification error: %.2f (%.2f, %.2f)',
+                mean(pred_error_testing),
+                mean(pred_error_testing) - 1.96 * sd(pred_error_testing) / sqrt(length(pred_error_testing)),
+                mean(pred_error_testing) + 1.96 * sd(pred_error_testing) / sqrt(length(pred_error_testing))),
+        logfile)
+  write(sprintf('Pairwise classification accuracy: %.2f (%.2f, %.2f)',
+                median(metrics$Pairwise),
+                quantile(metrics$Pairwise, 0.025),
+                quantile(metrics$Pairwise, 0.975)),
+        logfile)
+  
+  write("==============================",logfile)
+  write("Metrics for whole training data",logfile)
+  write("==============================",logfile)
+  write(sprintf('AUC of low risk: %.2f',metrics_training_data$AUC_Class_1),logfile)
+  write(sprintf('AUC of intermediate risk: %.2f',metrics_training_data$AUC_Class_2),logfile)
+  write(sprintf('AUC of high risk: %.2f',metrics_training_data$AUC_Class_3),logfile)
+  write(sprintf('Accuracy of low risk: %.2f',metrics_training_data$Accuracy_Class_1),logfile)
+  write(sprintf('Accuracy of intermediate risk: %.2f',metrics_training_data$Accuracy_Class_2),logfile)
+  write(sprintf('Accuracy of high risk: %.2f',metrics_training_data$Accuracy_Class_3),logfile)
+  write(sprintf('Sensitivity of low risk: %.2f',metrics_training_data$Sensitivity_class_1),logfile)
+  write(sprintf('Sensitivity of intermediate risk: %.2f',metrics_training_data$Sensitivity_class_2),logfile)
+  write(sprintf('Sensitivity of high risk: %.2f',metrics_training_data$Sensitivity_class_3),logfile)
+  write(sprintf('Specificity of low risk: %.2f',metrics_training_data$Specificity_class_1),logfile)
+  write(sprintf('Specificity of intermediate risk: %.2f',metrics_training_data$Specificity_class_2),logfile)
+  write(sprintf('Specificity of high risk: %.2f',metrics_training_data$Specificity_class_3),logfile)
+  write(sprintf('LR+ of low risk: %.2f',metrics_training_data$LR_positive_class_1),logfile)
+  write(sprintf('LR+ of intermediate risk: %.2f',metrics_training_data$LR_positive_class_2),logfile)
+  write(sprintf('LR+ of high risk: %.2f',metrics_training_data$LR_positive_class_3),logfile)
+  write(sprintf('LR- of low risk: %.2f',metrics_training_data$LR_negative_class_1),logfile)
+  write(sprintf('LR- of intermediate risk: %.2f',metrics_training_data$LR_negative_class_2),logfile)
+  write(sprintf('LR- of high risk: %.2f',metrics_training_data$LR_negative_class_3),logfile)
+  write(sprintf('F1score of low risk: %.2f',metrics_training_data$F1score_class_1),logfile)
+  write(sprintf('F1score of intermediate risk: %.2f',metrics_training_data$F1score_class_2),logfile)
+  write(sprintf('F1score of high risk: %.2f',metrics_training_data$F1score_class_3),logfile)
+  write(sprintf('Classification error: %.2f (%.2f, %.2f)',
+                mean(pred_error_training),
+                mean(pred_error_training) - 1.96 * sd(pred_error_training) / sqrt(length(pred_error_training)),
+                mean(pred_error_training) + 1.96 * sd(pred_error_training) / sqrt(length(pred_error_training))),
+        logfile)
+  write(sprintf('Pairwise classification accuracy: %.2f',metrics_training_data$Pairwise),logfile)
+  
+  write("==============================",logfile)
+  write("Metrics for whole testing data",logfile)
+  write("==============================",logfile)
+  write(sprintf('AUC of low risk: %.2f',metrics_testing_data$AUC_Class_1),logfile)
+  write(sprintf('AUC of intermediate risk: %.2f',metrics_testing_data$AUC_Class_2),logfile)
+  write(sprintf('AUC of high risk: %.2f',metrics_testing_data$AUC_Class_3),logfile)
+  write(sprintf('Accuracy of low risk: %.2f',metrics_testing_data$Accuracy_Class_1),logfile)
+  write(sprintf('Accuracy of intermediate risk: %.2f',metrics_testing_data$Accuracy_Class_2),logfile)
+  write(sprintf('Accuracy of high risk: %.2f',metrics_testing_data$Accuracy_Class_3),logfile)
+  write(sprintf('Sensitivity of low risk: %.2f',metrics_testing_data$Sensitivity_class_1),logfile)
+  write(sprintf('Sensitivity of intermediate risk: %.2f',metrics_testing_data$Sensitivity_class_2),logfile)
+  write(sprintf('Sensitivity of high risk: %.2f',metrics_testing_data$Sensitivity_class_3),logfile)
+  write(sprintf('Specificity of low risk: %.2f',metrics_testing_data$Specificity_class_1),logfile)
+  write(sprintf('Specificity of intermediate risk: %.2f',metrics_testing_data$Specificity_class_2),logfile)
+  write(sprintf('Specificity of high risk: %.2f',metrics_testing_data$Specificity_class_3),logfile)
+  write(sprintf('LR+ of low risk: %.2f',metrics_testing_data$LR_positive_class_1),logfile)
+  write(sprintf('LR+ of intermediate risk: %.2f',metrics_testing_data$LR_positive_class_2),logfile)
+  write(sprintf('LR+ of high risk: %.2f',metrics_testing_data$LR_positive_class_3),logfile)
+  write(sprintf('LR- of low risk: %.2f',metrics_testing_data$LR_negative_class_1),logfile)
+  write(sprintf('LR- of intermediate risk: %.2f',metrics_testing_data$LR_negative_class_2),logfile)
+  write(sprintf('LR- of high risk: %.2f',metrics_testing_data$LR_negative_class_3),logfile)
+  write(sprintf('F1score of low risk: %.2f',metrics_testing_data$F1score_class_1),logfile)
+  write(sprintf('F1score of intermediate risk: %.2f',metrics_testing_data$F1score_class_2),logfile)
+  write(sprintf('F1score of high risk: %.2f',metrics_testing_data$F1score_class_3),logfile)
+  write(sprintf('Pairwise classification accuracy: %.2f',metrics_testing_data$Pairwise),logfile)
 }
