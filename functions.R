@@ -35,39 +35,29 @@ calculate_B2 <- function(alpha1, alpha2, beta1, beta2, feature1, feature2) {
 }
 
 # Ordinal logistic regression
-run_all <- function(training_1 = 'trainingdf_1',testing_1 = 'testingdf_1',
-                    training_2 = 'trainingdf_2',testing_2 = 'testingdf_2',
+run_all <- function(training = 'trainingdf',testing = 'testingdf_1',
+                    # training_2 = 'trainingdf_2',testing_2 = 'testingdf_2',
                     feature_1 = 'feature_1',feature_2 = 'feature_2',
-                    cell_model_1 = 'cell_model_1',cell_model_2 = 'cell_model_2',
+                    unit_1 = "unit_1", unit_2 = "unit_2",
+                    # cell_model_1 = 'cell_model_1',cell_model_2 = 'cell_model_2',
                     num_tests = 10000, is_single = FALSE){
   if (!is_single) {
-    # Rename the feature according to the cell model
-    feature_model_1 <- paste(feature_1,cell_model_1,sep = "_")
-    feature_model_2 <- paste(feature_2,cell_model_2,sep = "_")
-    
     # Log file
-    logfile <- file(paste(feature_model_1,feature_model_2,"log.txt",sep = "_"),open = "wt")
+    logfile <- file(paste(feature_1,feature_2,"log.txt",sep = " "),open = "wt")
     
     # Load training data and change colnames
-    trainingdf_1 <- training_1[,c(feature_1,"label","drug_name","Sample_ID")]
-    colnames(trainingdf_1)[1] <- feature_model_1
-    trainingdf_2 <- training_2[,c(feature_2,"label","drug_name","Sample_ID")]
-    colnames(trainingdf_2)[1] <- feature_model_2
-    ordinaldf <- merge(trainingdf_1,trainingdf_2, by = c("Sample_ID","drug_name","label"))
+    ordinaldf <- training[,c(feature_1,feature_2,"label","drug_name","Sample_ID")]
+    # ordinaldf <- merge(trainingdf_1,trainingdf_2, by = c("Sample_ID","drug_name","label"))
     
     # Load testing data and change colnames
-    testingdf_1 <- testing_1[,c(feature_1,"label","drug_name","Sample_ID")]
-    colnames(testingdf_1)[1] <- feature_model_1
-    testingdf_2 <- testing_2[,c(feature_2,"label","drug_name","Sample_ID")]
-    colnames(testingdf_2)[1] <- feature_model_2
-    ordinaldf_test <- merge(testingdf_1,testingdf_2, by = c("Sample_ID","drug_name","label"))
+    ordinaldf_test <- testing[,c(feature_1,feature_2,"label","drug_name","Sample_ID")]
   } else {
     # Log file
-    logfile <- file(paste(feature_1,"log.txt",sep = "_"),open = "wt")
+    logfile <- file(paste(feature_1,"log.txt",sep = " "),open = "wt")
     
     # Load training and testing data
-    ordinaldf <- training_1[,c(feature_1,"label","drug_name","Sample_ID")]
-    ordinaldf_test <- testing_1[,c(feature_1,"label","drug_name","Sample_ID")]
+    ordinaldf <- training[,c(feature_1,"label","drug_name","Sample_ID")]
+    ordinaldf_test <- testing[,c(feature_1,"label","drug_name","Sample_ID")]
   }
   
   # Construct dataset for training and testing
@@ -84,7 +74,8 @@ run_all <- function(training_1 = 'trainingdf_1',testing_1 = 'testingdf_1',
   
   # Fit the ordinal logistic regression model
   if (!is_single) {
-    formula_string <- paste("label~", feature_model_1, "+", feature_model_2, sep = "")
+    # formula_string <- paste("label~", feature_model_1, "+", feature_model_2, sep = "")\
+    formula_string <- paste("label~", feature_1, "+", feature_2, sep = "")
   } else {
     formula_string <- paste("label~", feature_1, sep = "")
   }
@@ -147,8 +138,10 @@ run_all <- function(training_1 = 'trainingdf_1',testing_1 = 'testingdf_1',
       c2 <- 1.0 / beta2 * (alpha1 + log(exp(alpha2 - alpha1) - 2.0))
       
       # Calculate the TMS for training and testing dataset
-      ordinaldf["TMS"] <- TMS(alpha1,alpha2,beta1,beta2,ordinaldf[,feature_model_1],ordinaldf[,feature_model_2])
-      ordinaldf_test["TMS"] <- TMS(alpha1,alpha2,beta1,beta2,ordinaldf_test[,feature_model_1],ordinaldf_test[,feature_model_2])
+      # ordinaldf["TMS"] <- TMS(alpha1,alpha2,beta1,beta2,ordinaldf[,feature_model_1],ordinaldf[,feature_model_2])
+      # ordinaldf_test["TMS"] <- TMS(alpha1,alpha2,beta1,beta2,ordinaldf_test[,feature_model_1],ordinaldf_test[,feature_model_2])
+      ordinaldf["TMS"] <- TMS(alpha1,alpha2,beta1,beta2,ordinaldf[,feature_1],ordinaldf[,feature_2])
+      ordinaldf_test["TMS"] <- TMS(alpha1,alpha2,beta1,beta2,ordinaldf_test[,feature_1],ordinaldf_test[,feature_2])
     } else {
       beta2 <- NA
     }
@@ -156,15 +149,19 @@ run_all <- function(training_1 = 'trainingdf_1',testing_1 = 'testingdf_1',
   if (!is_single) {
     scatterplotfun(data = ordinaldf,
                    mod = mod,
-                   feature_model_1 = feature_model_1, 
-                   feature_model_2 = feature_model_2, 
+                   feature_1 = feature_1, 
+                   feature_2 = feature_2,
+                   unit_1 = unit_1,
+                   unit_2 = unit_2,
                    is_converged = converged, 
                    is_training = TRUE, 
                    is_legend = FALSE)
     scatterplotfun(data = ordinaldf_test,
                    mod = mod,
-                   feature_model_1 = feature_model_1, 
-                   feature_model_2 = feature_model_2, 
+                   feature_1 = feature_1, 
+                   feature_2 = feature_2, 
+                   unit_1 = unit_1,
+                   unit_2 = unit_2,
                    is_converged = converged, 
                    is_training = FALSE, 
                    is_legend = FALSE)
@@ -184,32 +181,57 @@ run_all <- function(training_1 = 'trainingdf_1',testing_1 = 'testingdf_1',
     }
     
     # Plot TMS for training dataset
-    label_colors <- c("green", "blue", "red")
+    label_colors <- c("low" = "green", "intermediate" = "blue", "high" = "red")
+    ordinaldf$risk <- ifelse(ordinaldf$label == 1, "low", 
+                             ifelse(ordinaldf$label == 2, "intermediate", "high"))
+    
+    ordinaldf_test$risk <- ifelse(ordinaldf_test$label == 1, "low", 
+                                  ifelse(ordinaldf_test$label == 2, "intermediate", "high"))
     if (!is_single) {
       tms_name <- "TMS"
-      filename_training <- paste(feature_model_1,feature_model_2,"training_dataset_tms.jpg",sep = "_")
-      filename_testing <- paste(feature_model_1,feature_model_2,"testing_dataset_tms.jpg",sep = "_")
+      filename_training <- paste(feature_1,feature_2,"training_dataset_tms.jpg",sep = "_")
+      filename_testing <- paste(feature_1,feature_2,"testing_dataset_tms.jpg",sep = "_")
+      # Plot TMS for training dataset
+      tmsplotfun(data = ordinaldf, 
+                 th1 = th1, 
+                 th2 = th2, 
+                 label_colors = label_colors, 
+                 title = "Training dataset",
+                 file_name = filename_training,
+                 tms_name = "TMS")
+      # Plot TMS for testing dataset
+      tmsplotfun(data = ordinaldf_test,
+                 th1 = th1, 
+                 th2 = th2, 
+                 label_colors = label_colors, 
+                 title = "Testing dataset",
+                 file_name = filename_testing, 
+                 tms_name = "TMS")
     } else {
       tms_name <- feature_1
       filename_training <- paste(feature_1,"training_dataset.jpg",sep = "_")
       filename_testing <- paste(feature_1,"testing_dataset.jpg",sep = "_")
+      # Plot TMS for training dataset
+      tmsplotfun(data = ordinaldf, 
+                 th1 = th1, 
+                 th2 = th2, 
+                 label_colors = label_colors, 
+                 title = "Training dataset",
+                 file_name = filename_training,
+                 tms_name = feature_1,
+                 tms_unit = unit_1,
+                 is_single = is_single)
+      # Plot TMS for testing dataset
+      tmsplotfun(data = ordinaldf_test,
+                 th1 = th1, 
+                 th2 = th2, 
+                 label_colors = label_colors, 
+                 title = "Testing dataset",
+                 file_name = filename_testing, 
+                 tms_name = feature_1,
+                 tms_unit = unit_1,
+                 is_single = is_single)
     }
-    tmsplotfun(data = ordinaldf, 
-               th1 = th1, 
-               th2 = th2, 
-               label_colors = label_colors, 
-               title = "Training dataset",
-               file_name = filename_training,
-               tms_name = tms_name)
-
-    # Plot TMS for testing dataset
-    tmsplotfun(data = ordinaldf_test,
-               th1 = th1, 
-               th2 = th2, 
-               label_colors = label_colors, 
-               title = "Testing dataset",
-               file_name = filename_testing, 
-               tms_name = tms_name)
   } else {
     return(NA)
   }
@@ -315,13 +337,17 @@ run_all <- function(training_1 = 'trainingdf_1',testing_1 = 'testingdf_1',
     if (!is_single) {
       # Fill the drug TMS row by row
       for (drug in test_data$drug_name) {
-        f1 <- test_data[,feature_model_1][test_data$drug_name == drug]
-        f2 <- test_data[,feature_model_2][test_data$drug_name == drug]
+        # f1 <- test_data[,feature_model_1][test_data$drug_name == drug]
+        # f2 <- test_data[,feature_model_2][test_data$drug_name == drug]
+        f1 <- test_data[,feature_1][test_data$drug_name == drug]
+        f2 <- test_data[,feature_2][test_data$drug_name == drug]
         drugs_tms[i, drug] <- TMS(alpha1,alpha2,beta1,beta2,f1,f2)
       }
       for (drug in training_data$drug_name) {
-        f1 <- training_data[,feature_model_1][training_data$drug_name == drug]
-        f2 <- training_data[,feature_model_2][training_data$drug_name == drug]
+        # f1 <- training_data[,feature_model_1][training_data$drug_name == drug]
+        # f2 <- training_data[,feature_model_2][training_data$drug_name == drug]
+        f1 <- training_data[,feature_1][training_data$drug_name == drug]
+        f2 <- training_data[,feature_2][training_data$drug_name == drug]
         drugs_tms[i, drug] <- TMS(alpha1,alpha2,beta1,beta2,f1,f2)
       }
     }
@@ -353,13 +379,16 @@ run_all <- function(training_1 = 'trainingdf_1',testing_1 = 'testingdf_1',
   
   if (!is_single) {
     # Save the metrics dataframe
-    write.csv(metrics, paste(feature_model_1,feature_model_2,"metrics.csv",sep = "_"), row.names = FALSE)
+    # write.csv(metrics, paste(feature_model_1,feature_model_2,"metrics.csv",sep = "_"), row.names = FALSE)
+    write.csv(metrics, paste(feature_1,feature_2,"metrics.csv",sep = "_"), row.names = FALSE)
     
     # Save the drug_predict dataframe
-    write.csv(drugs_predict, paste(feature_model_1,feature_model_2,"drugs_predict.csv",sep = "_"), row.names = FALSE)
+    # write.csv(drugs_predict, paste(feature_model_1,feature_model_2,"drugs_predict.csv",sep = "_"), row.names = FALSE)
+    write.csv(drugs_predict, paste(feature_1,feature_2,"drugs_predict.csv",sep = "_"), row.names = FALSE)
     
     # Save the drug_tms dataframe
-    write.csv(drugs_tms, paste(feature_model_1,feature_model_2,"drugs_tms.csv",sep = "_"), row.names = FALSE)
+    # write.csv(drugs_tms, paste(feature_model_1,feature_model_2,"drugs_tms.csv",sep = "_"), row.names = FALSE)
+    write.csv(drugs_tms, paste(feature_1,feature_2,"drugs_tms.csv",sep = "_"), row.names = FALSE)
   } else {
     # Save the metrics dataframe
     write.csv(metrics, paste(feature_1,"metrics.csv",sep = "_"), row.names = FALSE)
@@ -388,7 +417,8 @@ run_all <- function(training_1 = 'trainingdf_1',testing_1 = 'testingdf_1',
   
   # Store summary of metrics to summarydf
   if (!is_single) {
-    feature_pair_name <- paste(feature_model_1,feature_model_2,sep = "_")
+    # feature_pair_name <- paste(feature_model_1,feature_model_2,sep = "_")
+    feature_pair_name <- paste(feature_1,feature_2,sep = "_")
   } else {
     feature_pair_name <- feature_1
   }
@@ -569,21 +599,37 @@ metricsfun <- function(training_data, test_data, mod, label_values, tms_name = "
   return(metrics)
 }
 
-tmsplotfun <- function(data, th1, th2, label_colors, title, file_name, tms_name){
+tmsplotfun <- function(data, th1, th2, label_colors, title, file_name, tms_name, tms_unit, is_single = FALSE){
   data$drug_name <- factor(data$drug_name, levels = unique(data$drug_name[order(data$label)]))
-  plot <- ggplot(data, aes_string(x = tms_name, y = "drug_name", fill = "label")) +
-    geom_boxplot(color = "black", width = 0.5) +
-    labs(title = title, x = tms_name, y = "") +
+  if (!is_single) {
+    tms <- tms_name
+  } else{
+    tms <- paste(tms_name, tms_unit, sep=" ")
+  }
+  plot <- ggplot(data, aes_string(x = tms_name, y = "drug_name", fill = "risk")) +
+    geom_boxplot(color = "black", width = 0.5, size = 0.2, outlier.size = 0.5, ) +
+    labs(title = title, x = tms, y = "") +
     geom_vline(xintercept = th1, linetype = "dashed", color = "blue", size = 1)  +
     geom_vline(xintercept = th2, linetype = "dashed", color = "red", size = 1)  +
-    scale_fill_manual(values = label_colors)  # Set the fill colors
+    scale_fill_manual(values = label_colors) + # Set the fill colors
+    theme(plot.title = element_text(size = 20), # Title font size
+          # Change axis title font sizes
+          axis.title.x = element_text(size = 14), # X axis title font size
+          axis.title.y = element_text(size = 14), # Y axis title font size
+          # Change axis text font sizes
+          axis.text.x = element_text(size = 12), # X axis text font size
+          axis.text.y = element_text(size = 12), # Y axis text font size
+          # Change legend title and text font sizes
+          legend.title = element_text(size = 10), # Legend title font size
+          legend.text = element_text(size = 8) # Legend text font size
+    )
   ggsave(file_name, plot, width = 8, height = 6, dpi = 300)
 }
 
-scatterplotfun <- function(data, mod = NA, feature_model_1, feature_model_2, is_converged, is_training, is_legend){
+scatterplotfun <- function(data, mod = NA, feature_1, feature_2, unit_1, unit_2, is_converged, is_training, is_legend){
   # Check the column index
-  idx_model_1 <- as.integer(which(colnames(data) == feature_model_1))
-  idx_model_2 <- as.integer(which(colnames(data) == feature_model_2))
+  idx_model_1 <- as.integer(which(colnames(data) == feature_1))
+  idx_model_2 <- as.integer(which(colnames(data) == feature_2))
   idx_label <- as.integer(which(colnames(data) == "label"))
   
   if (is_converged) {
@@ -613,21 +659,22 @@ scatterplotfun <- function(data, mod = NA, feature_model_1, feature_model_2, is_
     title <- "Testing dataset"
     file_name <- "testing"
   }
-  jpeg(paste(feature_model_1,feature_model_2,file_name,"dataset.jpg",sep = "_"),quality = 100, units = "in", width = 5, height = 5, res = 300)
+  jpeg(paste(feature_1,feature_2,file_name,"dataset.jpg",sep = "_"),quality = 100, units = "in", width = 5, height = 5, res = 300)
   plot(data[,idx_model_1], 
        data[,idx_model_2], 
-       xlab = feature_model_1, 
-       ylab = feature_model_2,
+       xlab = paste(feature_1, unit_1, sep = " "), 
+       ylab = paste(feature_2, unit_2, sep = " "),
        main = title,
        cex.axis = 1.5, 
        cex.lab = 1.5, 
-       cex.main = 1.5)
+       cex.main = 1.5, 
+       cex = 0.5)
   if (is_legend) {
     legend("bottomright", legend = c("Low", "Intermediate", "High"), fill = c("green", "blue", "red"))
   }
-  points(data[,idx_model_1][data$label == "1"], data[,idx_model_2][data$label == "1"], col = "green")
-  points(data[,idx_model_1][data$label == "2"], data[,idx_model_2][data$label == "2"], col = "blue")
-  points(data[,idx_model_1][data$label == "3"], data[,idx_model_2][data$label == "3"], col = "red")
+  points(data[,idx_model_1][data$label == "1"], data[,idx_model_2][data$label == "1"], col = "green", cex = 0.5)
+  points(data[,idx_model_1][data$label == "2"], data[,idx_model_2][data$label == "2"], col = "blue", cex = 0.5)
+  points(data[,idx_model_1][data$label == "3"], data[,idx_model_2][data$label == "3"], col = "red", cex = 0.5)
   if (is_converged) {
     abline(a = c1, b = m, col = "blue", lty = 2, lwd = 2)  # Replace 'a' with the intercept if needed
     abline(a = c2, b = m, col = "red", lty = 2, lwd = 2)  # Replace 'a' with the intercept if needed
@@ -635,73 +682,43 @@ scatterplotfun <- function(data, mod = NA, feature_model_1, feature_model_2, is_
   dev.off()
 }
 
-pairsdfinitfun <- function(features, cell_models_1, cell_models_2){
+pairsdfinitfun <- function(features, units){
   pairsdf <- data.frame()
-  for (cell_model_1 in cell_models_1){
-    for (cell_model_2 in cell_models_2){
-      if (cell_model_1 == cell_model_2){
-        for (i in 1:(length(features) - 1)) {
-          for (j in (i + 1):length(features)) {
-            feature_1 <- features[i]
-            feature_2 <- features[j]
-            tempdf <- data.frame(cell_model_1 = cell_model_1,
-                                 cell_model_2 = cell_model_2,
-                                 feature_1 = feature_1,
-                                 feature_2 = feature_2)
-            pairsdf <- rbind(pairsdf,tempdf)
-          }# feature_1
-        } # feature_2
-      } else {
-        for (feature_1 in features){
-          for (feature_2 in features){
-            tempdf <- data.frame(cell_model_1 = cell_model_1,
-                                 cell_model_2 = cell_model_2,
-                                 feature_1 = feature_1,
-                                 feature_2 = feature_2)
-            pairsdf <- rbind(pairsdf,tempdf)
-          } # feature_2
-        } # feature_1
-      }
-    } # cell_model_2
-  } # cell_model_1
-  
+  for (i in 1:(length(features) - 1)) {
+    for (j in (i + 1):length(features)) {
+      feature_1 <- features[i]
+      feature_2 <- features[j]
+      unit_1 <- units[i]
+      unit_2 <- units[j]
+      tempdf <- data.frame(feature_1 = feature_1,
+                           feature_2 = feature_2,
+                           unit_1 = unit_1,
+                           unit_2 = unit_2)
+      pairsdf <- rbind(pairsdf,tempdf)
+    }# feature_1
+  } # feature_2
   return(pairsdf)
 }
 
-solvecellpair <- function(pair_id,
-                          filepath_training_ORD,
-                          filepath_testing_ORD,
-                          filepath_training_Tomek,
-                          filepath_testing_Tomek,
-                          feature_1,
-                          feature_2,
-                          cell_model_1,
-                          cell_model_2,
-                          num_tests){
-  feature_model_1 <- paste(feature_1,cell_model_1,sep = "_")
-  feature_model_2 <- paste(feature_2,cell_model_2,sep = "_")
-  print(paste(pair_id,feature_model_1,feature_model_2,sep = "_"))
+solvepair <- function(pair_id,
+                      filepath_training,
+                      filepath_testing,
+                      feature_1,
+                      feature_2,
+                      unit_1,
+                      unit_2,
+                      num_tests){
+  print(paste(pair_id,feature_1,feature_2,sep = "_"))
   
-  # Prepare the raw training and testing dataset
-  if (cell_model_1 == "ORD"){
-    training_1 <- read_csv(filepath_training_ORD, show_col_types = FALSE)
-    testing_1 <- read_csv(filepath_testing_ORD, show_col_types = FALSE)
-  } else if(cell_model_1 == "Tomek"){
-    training_1 <- read_csv(filepath_training_Tomek, show_col_types = FALSE)
-    testing_1 <- read_csv(filepath_testing_Tomek, show_col_types = FALSE)
-  }
-  if (cell_model_2 == "ORD"){
-    training_2 <- read_csv(filepath_training_ORD, show_col_types = FALSE)
-    testing_2 <- read_csv(filepath_testing_ORD, show_col_types = FALSE)
-  } else if(cell_model_2 == "Tomek"){
-    training_2 <- read_csv(filepath_training_Tomek, show_col_types = FALSE)
-    testing_2 <- read_csv(filepath_testing_Tomek, show_col_types = FALSE)
-  }
+  training <- data.frame(read_csv(filepath_training, show_col_types = FALSE))
+  testing <- data.frame(read_csv(filepath_testing, show_col_types = FALSE))
+ 
   # Perform all
-  resultdf <- run_all(training_1,testing_1,
-                    training_2,testing_2,
+  resultdf <- run_all(training,testing,
+                    # training_2,testing_2,
                     feature_1,feature_2,
-                    cell_model_1,cell_model_2,
+                    unit_1, unit_2,
+                    # cell_model_1,cell_model_2,
                     num_tests,is_single = FALSE)
   return(resultdf)
 }
