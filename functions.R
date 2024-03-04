@@ -34,32 +34,34 @@ calculate_B2 <- function(alpha1, alpha2, beta1, beta2, feature1, feature2) {
   return(1.0 + sigmoid(z1) - 2.0 * sigmoid(z2))
 }
 
-# Ordinal logistic regression
-run_all <- function(training = 'trainingdf',testing = 'testingdf_1',
-                    # training_2 = 'trainingdf_2',testing_2 = 'testingdf_2',
-                    feature_1 = 'feature_1',feature_2 = 'feature_2',
-                    unit_1 = "unit_1", unit_2 = "unit_2",
-                    # cell_model_1 = 'cell_model_1',cell_model_2 = 'cell_model_2',
-                    num_tests = 10000, is_single = FALSE){
-  if (!is_single) {
-    # Log file
-    logfile <- file(paste(feature_1,feature_2,"log.txt",sep = " "),open = "wt")
-    
-    # Load training data and change colnames
-    ordinaldf <- training[,c(feature_1,feature_2,"label","drug_name","Sample_ID")]
-    # ordinaldf <- merge(trainingdf_1,trainingdf_2, by = c("Sample_ID","drug_name","label"))
-    
-    # Load testing data and change colnames
-    ordinaldf_test <- testing[,c(feature_1,feature_2,"label","drug_name","Sample_ID")]
-  } else {
-    # Log file
-    logfile <- file(paste(feature_1,"log.txt",sep = " "),open = "wt")
-    
-    # Load training and testing data
-    ordinaldf <- training[,c(feature_1,"label","drug_name","Sample_ID")]
-    ordinaldf_test <- testing[,c(feature_1,"label","drug_name","Sample_ID")]
-  }
+run_all <- function(results_folder = 'results',
+                    training = 'trainingdf',
+                    testing = 'testingdf',
+                    features_vector = 'features',
+                    units_vector = 'units',
+                    num_tests = 10000,
+                    is_normalized = FALSE){
+  # Determine if the analysis involves a single feature or multiple features
+  is_single <- length(features) == 1
   
+  # Construct a log file name based on the number of features
+  log_filename <- if (!is_single) {
+    paste(features_vector, collapse="-")
+  } else {
+    features_vector
+  }
+  logfile <- file(paste(results_folder,"/",paste(log_filename, "log.txt", sep="_"), sep = ""), open="wt")
+  
+  # Dynamically select columns for the analysis based on features
+  # Include common columns like "label", "drug_name", "Sample_ID"
+  common_cols <- c("label", "drug_name", "Sample_ID")
+  training_cols <- as.character(c(features_vector, common_cols))
+  testing_cols <- as.character(c(features_vector, common_cols))
+  
+  # Subset training and testing dataframes based on selected columns
+  ordinaldf <- training[, training_cols]
+  ordinaldf_test <- testing[, testing_cols]
+
   # Construct dataset for training and testing
   levels <- c("low", "intermediate", "high")
   values <- c(1, 2, 3)
@@ -72,21 +74,31 @@ run_all <- function(training = 'trainingdf',testing = 'testingdf_1',
   ordinaldf <- na.omit(ordinaldf)
   ordinaldf_test <- na.omit(ordinaldf_test)
   
-  # Fit the ordinal logistic regression model
-  if (!is_single) {
-    # formula_string <- paste("label~", feature_model_1, "+", feature_model_2, sep = "")\
-    formula_string <- paste("label~", feature_1, "+", feature_2, sep = "")
-  } else {
-    formula_string <- paste("label~", feature_1, sep = "")
+  # Normalize the data
+  dimension <- length(features_vector)
+  if (is_normalized) {
+    # Calculate mean and SD for the first m columns of ordinaldf
+    means <- sapply(ordinaldf[1:dimension], mean)
+    sds <- sapply(ordinaldf[1:dimension], sd)
+    tempdf <- ordinaldf
+    tempdf[1:dimension] <- mapply(function(x, mean, sd) (x - mean) / sd, ordinaldf[1:dimension], means, sds)
+    ordinaldf <- tempdf
+    tempdf <- ordinaldf_test
+    tempdf[1:dimension] <- mapply(function(x, mean, sd) (x - mean) / sd, ordinaldf_test[1:dimension], means, sds)
+    ordinaldf_test <- tempdf
   }
-  formula <- as.formula(formula_string)
   
+  # Fit the ordinal logistic regression model
+  # Prepare the formula for logistic regression based on the number of features
+  formula_string <- paste("label ~", paste(features_vector[1:dimension], collapse = " + "))
+  formula <- as.formula(formula_string)
+
   # Specify the number of attempts
   max_attempts <- 10000
-  
+
   # Flag to check if the model has converged
   converged <- FALSE
-  
+
   # First trial without start option
   tryCatch({
     # Attempt to fit the model without specifying start
@@ -95,18 +107,14 @@ run_all <- function(training = 'trainingdf',testing = 'testingdf_1',
   }, error = function(e) {
     write(sprintf("First trial without 'start' failed. Retrying..."),logfile)
   })
-  
+
   # If the first trial fails, attempt to fit with random starting values
   attempts <- as.integer(0)
   if (!converged) {
     for (attemp_idx in 1:max_attempts) {
       # Generate random starting values
-      if (!is_single) {
-        start_values <- rnorm(4, mean = 0.0, sd = 100.0)
-      } else {
-        start_values <- rnorm(3, mean = 0.0, sd = 100.0)
-      }
-      
+      start_values <- rnorm(dimension + 2, mean = 0.0, sd = 100.0)
+
       # Attempt to fit the model with random starting values
       tryCatch({
         mod <- polr(formula, data = ordinaldf, start = start_values, Hess = TRUE)
@@ -121,124 +129,119 @@ run_all <- function(training = 'trainingdf',testing = 'testingdf_1',
   # If all attempts fail, print a message
   if (!converged) {
     write(sprintf("Could not fit the model after %d attempts",max_attempts),logfile)
-    
+
   } else {
     # Make predictions for training dataset
     predicted_labels <- predict(mod, newdata = ordinaldf, type = "class")
-    
+
     # Variables from Ordinal Logistic Regression model
-    alpha1 <- as.numeric(mod$zeta[1])
-    alpha2 <- as.numeric(mod$zeta[2])
-    beta1 <- as.numeric(mod$coefficients[1])
+    alphas <- as.numeric(mod$zeta)  # Alpha values
+    betas <- as.numeric(mod$coefficients)  # Beta coefficients for all features
+    
     if (!is_single) {
-      beta2 <- as.numeric(mod$coefficients[2])
-      # Some descriptions of decision boundaries
-      m <- - beta1 / beta2
-      c1 <- - 1.0 / beta2 * (- alpha1 + log(1.0 - 2.0 * exp(alpha1 - alpha2)))
-      c2 <- 1.0 / beta2 * (alpha1 + log(exp(alpha2 - alpha1) - 2.0))
-      
-      # Calculate the TMS for training and testing dataset
-      # ordinaldf["TMS"] <- TMS(alpha1,alpha2,beta1,beta2,ordinaldf[,feature_model_1],ordinaldf[,feature_model_2])
-      # ordinaldf_test["TMS"] <- TMS(alpha1,alpha2,beta1,beta2,ordinaldf_test[,feature_model_1],ordinaldf_test[,feature_model_2])
-      ordinaldf["TMS"] <- TMS(alpha1,alpha2,beta1,beta2,ordinaldf[,feature_1],ordinaldf[,feature_2])
-      ordinaldf_test["TMS"] <- TMS(alpha1,alpha2,beta1,beta2,ordinaldf_test[,feature_1],ordinaldf_test[,feature_2])
-    } else {
-      beta2 <- NA
+      # Apply TMS function row-wise efficiently
+      ordinaldf$TMS <- apply(ordinaldf[, 1:dimension], 1, function(row) TMS(alphas, betas, row))
+      ordinaldf_test$TMS <- apply(ordinaldf_test[, 1:dimension], 1, function(row) TMS(alphas, betas, row))
     }
-  } 
-  if (!is_single) {
+  }
+
+  if (dimension == 2) {
     scatterplotfun(data = ordinaldf,
                    mod = mod,
-                   feature_1 = feature_1, 
-                   feature_2 = feature_2,
-                   unit_1 = unit_1,
-                   unit_2 = unit_2,
-                   is_converged = converged, 
-                   is_training = TRUE, 
-                   is_legend = FALSE)
+                   feature_1 = as.character(features_vector[1]),
+                   feature_2 = as.character(features_vector[2]),
+                   unit_1 = as.character(units_vector[1]),
+                   unit_2 = as.character(units_vector[2]),
+                   is_converged = converged,
+                   is_training = TRUE,
+                   is_legend = FALSE,
+                   results_folder = results_folder,
+                   is_normalized = is_normalized)
     scatterplotfun(data = ordinaldf_test,
                    mod = mod,
-                   feature_1 = feature_1, 
-                   feature_2 = feature_2, 
-                   unit_1 = unit_1,
-                   unit_2 = unit_2,
-                   is_converged = converged, 
-                   is_training = FALSE, 
-                   is_legend = FALSE)
+                   feature_1 = as.character(features_vector[1]),
+                   feature_2 = as.character(features_vector[2]),
+                   unit_1 = as.character(units_vector[1]),
+                   unit_2 = as.character(units_vector[2]),
+                   is_converged = converged,
+                   is_training = FALSE,
+                   is_legend = FALSE,
+                   results_folder = results_folder,
+                   is_normalized = is_normalized)
   }
   # Constants of the TMS
   if (converged) {
-    if (!is_single) {
-      c1_tms <- c1 * beta2
-      c2_tms <- c2 * beta2
-      th1 <- (c2_tms - c1_tms) / 2.0
-      th2 <- (c1_tms - c2_tms) / 2.0
-    } else {
-      # th1 <- -log(exp(-alpha1) - 2.0 * exp(-alpha2))/beta1
-      # th2 <- -log(exp(-alpha1) * exp(-alpha2) / (exp(-alpha1) - 2.0 * exp(-alpha2))) / beta1
-      th1 <- - 1.0 / beta1 * (- alpha1 + log(1.0 - 2.0 * exp(alpha1 - alpha2)))
-      th2 <- 1.0 / beta1 * (alpha1 + log(exp(alpha2 - alpha1) - 2.0))
-    }
-    
+    # if (!is_single) {
+      th1 <- -(alphas[1] - alphas[2] ) / 2.0 - log(1.0 - 2.0 * exp(alphas[1] - alphas[2]))
+      th2 <- -th1
+    # } else {
+    #   th1 <- - 1.0 / betas[1] * (- alphas[1] + log(1.0 - 2.0 * exp(alphas[1] - alphas[2])))
+    #   th2 <- 1.0 / betas[1] * (alphas[1] + log(exp(alphas[2] - alphas[1]) - 2.0))
+    # }
+
     # Plot TMS for training dataset
     label_colors <- c("low" = "green", "intermediate" = "blue", "high" = "red")
-    ordinaldf$risk <- ifelse(ordinaldf$label == 1, "low", 
+    ordinaldf$risk <- ifelse(ordinaldf$label == 1, "low",
                              ifelse(ordinaldf$label == 2, "intermediate", "high"))
-    
-    ordinaldf_test$risk <- ifelse(ordinaldf_test$label == 1, "low", 
+
+    ordinaldf_test$risk <- ifelse(ordinaldf_test$label == 1, "low",
                                   ifelse(ordinaldf_test$label == 2, "intermediate", "high"))
-    if (!is_single) {
+    # if (!is_single) {
       tms_name <- "TMS"
-      filename_training <- paste(feature_1,feature_2,"training_dataset_tms.jpg",sep = "_")
-      filename_testing <- paste(feature_1,feature_2,"testing_dataset_tms.jpg",sep = "_")
+      filename_training <- paste(results_folder,"/",paste(log_filename, "training_dataset_tms.jpg", sep="_"), sep = "")
+      filename_testing <- paste(results_folder,"/",paste(log_filename, "testing_dataset_tms.jpg", sep="_"), sep = "")
       # Plot TMS for training dataset
-      tmsplotfun(data = ordinaldf, 
-                 th1 = th1, 
-                 th2 = th2, 
-                 label_colors = label_colors, 
+      tmsplotfun(data = ordinaldf,
+                 th1 = th1,
+                 th2 = th2,
+                 label_colors = label_colors,
                  title = "Training dataset",
                  file_name = filename_training,
                  tms_name = "TMS")
+      # ,
+      #            is_single = is_single)
       # Plot TMS for testing dataset
       tmsplotfun(data = ordinaldf_test,
-                 th1 = th1, 
-                 th2 = th2, 
-                 label_colors = label_colors, 
+                 th1 = th1,
+                 th2 = th2,
+                 label_colors = label_colors,
                  title = "Testing dataset",
-                 file_name = filename_testing, 
+                 file_name = filename_testing,
                  tms_name = "TMS")
-    } else {
-      tms_name <- feature_1
-      filename_training <- paste(feature_1,"training_dataset.jpg",sep = "_")
-      filename_testing <- paste(feature_1,"testing_dataset.jpg",sep = "_")
+      # ,
+      #            is_single = is_single)
+    # } else {
+      # tms_name <- as.character(features_vector[1])
+      # filename_training <- paste(results_folder,"/",paste(tms_name,"training_dataset.jpg",sep = "_"), sep = "")
+      # filename_testing <- paste(results_folder,"/",paste(tms_name,"testing_dataset.jpg",sep = "_"), sep = "")
       # Plot TMS for training dataset
-      tmsplotfun(data = ordinaldf, 
-                 th1 = th1, 
-                 th2 = th2, 
-                 label_colors = label_colors, 
-                 title = "Training dataset",
-                 file_name = filename_training,
-                 tms_name = feature_1,
-                 tms_unit = unit_1,
-                 is_single = is_single)
+      # tmsplotfun(data = ordinaldf,
+      #            th1 = th1,
+      #            th2 = th2,
+      #            label_colors = label_colors,
+      #            title = "Training dataset",
+      #            file_name = filename_training,
+      #            tms_name = tms_name,
+      #            tms_unit = as.character(units_vector[1]),
+      #            is_single = is_single)
       # Plot TMS for testing dataset
-      tmsplotfun(data = ordinaldf_test,
-                 th1 = th1, 
-                 th2 = th2, 
-                 label_colors = label_colors, 
-                 title = "Testing dataset",
-                 file_name = filename_testing, 
-                 tms_name = feature_1,
-                 tms_unit = unit_1,
-                 is_single = is_single)
-    }
+      # tmsplotfun(data = ordinaldf_test,
+      #            th1 = th1,
+      #            th2 = th2,
+      #            label_colors = label_colors,
+      #            title = "Testing dataset",
+      #            file_name = filename_testing,
+      #            tms_name = tms_name,
+      #            tms_unit = as.character(units_vector[1]),
+      #            is_single = is_single)
+    # }
   } else {
     return(NA)
   }
-  
+
   # Preallocate the metrics dataframe
   metrics <- data.frame()
-  
+
   # Preallocate the drug test predictions
   drugs_predict <- data.frame(
     azimilide = numeric(num_tests),
@@ -258,7 +261,7 @@ run_all <- function(training = 'trainingdf',testing = 'testingdf_1',
     nitrendipine = numeric(num_tests),
     tamoxifen = numeric(num_tests)
   )
-  
+
   # Preallocate the drug TSM calculation
   drugs_tms <- data.frame(
     azimilide = numeric(num_tests),
@@ -290,7 +293,7 @@ run_all <- function(training = 'trainingdf',testing = 'testingdf_1',
     ranolazine = numeric(num_tests),
     verapamil = numeric(num_tests)
   )
-  
+
   # Iterate through the num_tests tests
   for (i in 1:num_tests) {
     # Create a subset with 16 testing drug names
@@ -313,17 +316,17 @@ run_all <- function(training = 'trainingdf',testing = 'testingdf_1',
       sampled_rows <- rbind(sampled_rows, sampled_row)
     }
     training_data <- sampled_rows
-    training_data["is_training"] <- 1 
-    
-    # Calculate all metrics 
-    tempmetrics <- metricsfun(training_data = training_data, 
-                              test_data = test_data, 
-                              mod = mod, 
-                              label_values = values, 
+    training_data["is_training"] <- 1
+
+    # Calculate all metrics
+    tempmetrics <- metricsfun(training_data = training_data,
+                              test_data = test_data,
+                              mod = mod,
+                              label_values = values,
                               tms_name = tms_name,
                               is_whole = FALSE)
-    
-    # Store the calculated metrics 
+
+    # Store the calculated metrics
     metrics <- rbind(metrics,tempmetrics)
 
     # Fill the drug prediction row by row
@@ -331,104 +334,84 @@ run_all <- function(training = 'trainingdf',testing = 'testingdf_1',
     new_test_data <- cbind(test_data,predicted_labels_test)
     for (drug in test_data$drug_name) {
       temp_data <- subset(new_test_data,new_test_data$drug_name == drug)
-      drugs_predict[i, drug] <- as.numeric(temp_data$label == temp_data$predicted_labels_test)      
+      drugs_predict[i, drug] <- as.numeric(temp_data$label == temp_data$predicted_labels_test)
     }
-    
+
     if (!is_single) {
       # Fill the drug TMS row by row
       for (drug in test_data$drug_name) {
-        # f1 <- test_data[,feature_model_1][test_data$drug_name == drug]
-        # f2 <- test_data[,feature_model_2][test_data$drug_name == drug]
-        f1 <- test_data[,feature_1][test_data$drug_name == drug]
-        f2 <- test_data[,feature_2][test_data$drug_name == drug]
-        drugs_tms[i, drug] <- TMS(alpha1,alpha2,beta1,beta2,f1,f2)
+        drugs_tms[i, drug] <- test_data$TMS[test_data$drug_name == drug]
       }
       for (drug in training_data$drug_name) {
-        # f1 <- training_data[,feature_model_1][training_data$drug_name == drug]
-        # f2 <- training_data[,feature_model_2][training_data$drug_name == drug]
-        f1 <- training_data[,feature_1][training_data$drug_name == drug]
-        f2 <- training_data[,feature_2][training_data$drug_name == drug]
-        drugs_tms[i, drug] <- TMS(alpha1,alpha2,beta1,beta2,f1,f2)
+        drugs_tms[i, drug] <- training_data$TMS[training_data$drug_name == drug]
       }
     }
   } # i-th test
-  
+
   # Calculate the classification error from the whole training dataset
   predicted_labels_training <- predict(mod, newdata = ordinaldf, type = "class")
   pred_err_training <- (abs(as.integer(predicted_labels_training) - as.integer(ordinaldf$label)))
-  
+
   # Calculate the classification error from the whole testing dataset
   predicted_labels_testing <- predict(mod, newdata = ordinaldf_test, type = "class")
   pred_err_testing <- (abs(as.integer(predicted_labels_testing) - as.integer(ordinaldf_test$label)))
-  
+
   # Calculate the metrics for the whole dataset
   ordinaldf["is_training"] = as.integer(1)
   ordinaldf_test["is_training"] = as.integer(0)
-  metrics_training_data <- metricsfun(training_data = ordinaldf, 
+  metrics_training_data <- metricsfun(training_data = ordinaldf,
                                    test_data = ordinaldf,
                                    mod = mod,
                                    label_values = values,
                                    tms_name = tms_name,
                                    is_whole = TRUE)
-  metrics_testing_data <- metricsfun(training_data = ordinaldf, 
+  metrics_testing_data <- metricsfun(training_data = ordinaldf,
                                      test_data = ordinaldf_test,
                                      mod = mod,
                                      label_values = values,
                                      tms_name = tms_name,
                                      is_whole = TRUE)
-  
+
   if (!is_single) {
     # Save the metrics dataframe
-    # write.csv(metrics, paste(feature_model_1,feature_model_2,"metrics.csv",sep = "_"), row.names = FALSE)
-    write.csv(metrics, paste(feature_1,feature_2,"metrics.csv",sep = "_"), row.names = FALSE)
-    
+    write.csv(metrics, paste(results_folder,"/",paste(log_filename,"metrics.csv",sep = "_"), sep = ""), row.names = FALSE)
+
     # Save the drug_predict dataframe
-    # write.csv(drugs_predict, paste(feature_model_1,feature_model_2,"drugs_predict.csv",sep = "_"), row.names = FALSE)
-    write.csv(drugs_predict, paste(feature_1,feature_2,"drugs_predict.csv",sep = "_"), row.names = FALSE)
-    
+    write.csv(drugs_predict, paste(results_folder,"/",paste(log_filename,"drugs_predict.csv",sep = "_"), sep = ""), row.names = FALSE)
+
     # Save the drug_tms dataframe
-    # write.csv(drugs_tms, paste(feature_model_1,feature_model_2,"drugs_tms.csv",sep = "_"), row.names = FALSE)
-    write.csv(drugs_tms, paste(feature_1,feature_2,"drugs_tms.csv",sep = "_"), row.names = FALSE)
+    write.csv(drugs_tms, paste(results_folder,"/",paste(log_filename,"drugs_tms.csv",sep = "_"), sep = ""), row.names = FALSE)
   } else {
     # Save the metrics dataframe
-    write.csv(metrics, paste(feature_1,"metrics.csv",sep = "_"), row.names = FALSE)
+    write.csv(metrics, paste(results_folder,"/",paste(log_filename,"metrics.csv",sep = "_"), sep = ""), row.names = FALSE)
     
     # Save the drug_predict dataframe
-    write.csv(drugs_predict, paste(feature_1,"drugs_predict.csv",sep = "_"), row.names = FALSE)
+    write.csv(drugs_predict, paste(results_folder,"/",paste(log_filename,"drugs_predict.csv",sep = "_"), sep = ""), row.names = FALSE)
   }
-  
-  writemetricsfun(metrics = metrics, 
+
+  writemetricsfun(metrics = metrics,
                   metrics_training_data = metrics_training_data,
                   metrics_testing_data = metrics_testing_data,
-                  pred_error_training = pred_err_training, 
+                  pred_error_training = pred_err_training,
                   pred_error_testing = pred_err_testing,
-                  logfile = logfile, 
+                  logfile = logfile,
                   is_single = is_single,
-                  th1 = th1, 
+                  th1 = th1,
                   th2 = th2)
- 
+
   # Close the connection to the text file
-  close(logfile) 
-  
+  close(logfile)
+
   # Rank score for the OLR model
-  rank_score <- rankscorefun(metrics = metrics, 
-                             pred_error = pred_err_testing, 
+  rank_score <- rankscorefun(metrics = metrics,
+                             pred_error = pred_err_testing,
                              is_normalized = TRUE)
-  
+
   # Store summary of metrics to summarydf
-  if (!is_single) {
-    # feature_pair_name <- paste(feature_model_1,feature_model_2,sep = "_")
-    feature_pair_name <- paste(feature_1,feature_2,sep = "_")
-  } else {
-    feature_pair_name <- feature_1
-  }
-  
+  feature_pair_name <- log_filename
+
   summarydf <- data.frame(
     Feature_Pair = feature_pair_name,
-    Alpha_1 = alpha1,
-    Alpha_2 = alpha2,
-    Beta_1 = beta1,
-    Beta_2 = beta2,
     Accuracy_Class_1 = quantile(metrics$Accuracy_Class_1, 0.025),
     Accuracy_Class_2 = quantile(metrics$Accuracy_Class_2, 0.025),
     Accuracy_Class_3 = quantile(metrics$Accuracy_Class_3, 0.025),
@@ -455,13 +438,23 @@ run_all <- function(training = 'trainingdf',testing = 'testingdf_1',
     Rank_score = rank_score
   )
   
+  # Add Alphas
+  for (i in 1:length(alphas)) {
+    summarydf[[paste0("Alpha_", i)]] <- alphas[i]
+  }
+  
+  # Add Betas
+  for (i in 1:length(betas)) {
+    summarydf[[paste0("Beta_", i)]] <- betas[i]
+  }
+  
   return(summarydf)
 }
 
-TMS <- function(alpha1,alpha2,beta1,beta2,feature1,feature2){
-  z1 <- alpha1 - beta1 * feature1 - beta2 * feature2
-  z2 <- alpha2 - beta1 * feature1 - beta2 * feature2
-  
+TMS <- function(alphas, betas, features_row){
+  z1 <- alphas[1] - sum(betas * features_row)
+  z2 <- alphas[2] - sum(betas * features_row)
+
   return((z1 + z2) / 2.0)
 }
 
@@ -599,13 +592,9 @@ metricsfun <- function(training_data, test_data, mod, label_values, tms_name = "
   return(metrics)
 }
 
-tmsplotfun <- function(data, th1, th2, label_colors, title, file_name, tms_name, tms_unit, is_single = FALSE){
+tmsplotfun <- function(data, th1, th2, label_colors, title, file_name, tms_name, tms_unit){
   data$drug_name <- factor(data$drug_name, levels = unique(data$drug_name[order(data$label)]))
-  if (!is_single) {
-    tms <- tms_name
-  } else{
-    tms <- paste(tms_name, tms_unit, sep=" ")
-  }
+  tms <- tms_name
   plot <- ggplot(data, aes_string(x = tms_name, y = "drug_name", fill = "risk")) +
     geom_boxplot(color = "black", width = 0.5, size = 0.2, outlier.size = 0.5, ) +
     labs(title = title, x = tms, y = "") +
@@ -626,8 +615,19 @@ tmsplotfun <- function(data, th1, th2, label_colors, title, file_name, tms_name,
   ggsave(file_name, plot, width = 8, height = 6, dpi = 300)
 }
 
-scatterplotfun <- function(data, mod = NA, feature_1, feature_2, unit_1, unit_2, is_converged, is_training, is_legend){
+scatterplotfun <- function(data, 
+                           mod = NA, 
+                           feature_1, 
+                           feature_2, 
+                           unit_1, 
+                           unit_2, 
+                           is_converged, 
+                           is_training, 
+                           is_legend, 
+                           results_folder,
+                           is_normalized){
   # Check the column index
+  data <- data.frame(data)
   idx_model_1 <- as.integer(which(colnames(data) == feature_1))
   idx_model_2 <- as.integer(which(colnames(data) == feature_2))
   idx_label <- as.integer(which(colnames(data) == "label"))
@@ -659,7 +659,11 @@ scatterplotfun <- function(data, mod = NA, feature_1, feature_2, unit_1, unit_2,
     title <- "Testing dataset"
     file_name <- "testing"
   }
-  jpeg(paste(feature_1,feature_2,file_name,"dataset.jpg",sep = "_"),quality = 100, units = "in", width = 5, height = 5, res = 300)
+  if (is_normalized) {
+    unit_1 <- ""
+    unit_2 <- ""
+  }
+  jpeg(paste(results_folder,"/",paste(feature_1,feature_2,file_name,"dataset.jpg",sep = "_"), sep = ""),quality = 100, units = "in", width = 5, height = 5, res = 300)
   plot(data[,idx_model_1], 
        data[,idx_model_2], 
        xlab = paste(feature_1, unit_1, sep = " "), 
@@ -682,44 +686,83 @@ scatterplotfun <- function(data, mod = NA, feature_1, feature_2, unit_1, unit_2,
   dev.off()
 }
 
-pairsdfinitfun <- function(features, units){
-  pairsdf <- data.frame()
-  for (i in 1:(length(features) - 1)) {
-    for (j in (i + 1):length(features)) {
-      feature_1 <- features[i]
-      feature_2 <- features[j]
-      unit_1 <- units[i]
-      unit_2 <- units[j]
-      tempdf <- data.frame(feature_1 = feature_1,
-                           feature_2 = feature_2,
-                           unit_1 = unit_1,
-                           unit_2 = unit_2)
-      pairsdf <- rbind(pairsdf,tempdf)
-    }# feature_1
-  } # feature_2
+# pairsdfinitfun <- function(features, units){
+#   pairsdf <- data.frame()
+#   for (i in 1:(length(features) - 1)) {
+#     for (j in (i + 1):length(features)) {
+#       feature_1 <- features[i]
+#       feature_2 <- features[j]
+#       unit_1 <- units[i]
+#       unit_2 <- units[j]
+#       tempdf <- data.frame(feature_1 = feature_1,
+#                            feature_2 = feature_2,
+#                            unit_1 = unit_1,
+#                            unit_2 = unit_2)
+#       pairsdf <- rbind(pairsdf,tempdf)
+#     }# feature_1
+#   } # feature_2
+#   return(pairsdf)
+# }
+
+pairsdfinitfun <- function(features, units, dimension) {
+  if (dimension > length(features)) {
+    stop("Dimension cannot be greater than the number of features.")
+  }
+
+  # Calculate all possible combinations of features and units
+  feature_combinations <- combn(features, dimension, simplify = FALSE)
+  unit_combinations <- combn(units, dimension, simplify = FALSE)
+
+  # Initialize an empty list to store data frames for each combination
+  pairsdf_list <- list()
+
+  # Loop through each combination and create a data frame
+  for (i in seq_along(feature_combinations)) {
+    feature_combination <- feature_combinations[[i]]
+    unit_combination <- unit_combinations[[i]]
+
+    # Create a data frame with the feature names and units for this combination
+    feature_names <- paste0("feature_", seq_len(dimension))
+    unit_names <- paste0("unit_", seq_len(dimension))
+    tempdf <- setNames(data.frame(t(feature_combination)), feature_names)
+    unitdf <- setNames(data.frame(t(unit_combination)), unit_names)
+
+    # Combine features and units into one data frame
+    combinedf <- cbind(tempdf, unitdf)
+
+    # Add the combined data frame to the list
+    pairsdf_list[[i]] <- combinedf
+  }
+
+  # Combine all data frames in the list into a single data frame
+  pairsdf <- do.call("rbind", pairsdf_list)
+
   return(pairsdf)
 }
 
-solvepair <- function(pair_id,
+solvepair <- function(results_folder,
+                      pair_id,
                       filepath_training,
                       filepath_testing,
-                      feature_1,
-                      feature_2,
-                      unit_1,
-                      unit_2,
-                      num_tests){
-  print(paste(pair_id,feature_1,feature_2,sep = "_"))
-  
-  training <- data.frame(read_csv(filepath_training, show_col_types = FALSE))
-  testing <- data.frame(read_csv(filepath_testing, show_col_types = FALSE))
- 
+                      features_vector,
+                      units_vector,
+                      num_tests, 
+                      is_normalized){
+  # Print the current pair_id and features being processed
+  print(paste(c(pair_id, features_vector), collapse = "_"))
+
+  # Read in the training and testing datasets
+  training <- read_csv(filepath_training, show_col_types = FALSE)
+  testing <- read_csv(filepath_testing, show_col_types = FALSE)
+
   # Perform all
-  resultdf <- run_all(training,testing,
-                    # training_2,testing_2,
-                    feature_1,feature_2,
-                    unit_1, unit_2,
-                    # cell_model_1,cell_model_2,
-                    num_tests,is_single = FALSE)
+  resultdf <- run_all(results_folder = results_folder,
+                      training = training,
+                      testing = testing,
+                      features_vector = features_vector,
+                      units_vector = units_vector,
+                      num_tests = num_tests,
+                      is_normalized = is_normalized)
   return(resultdf)
 }
 
@@ -733,15 +776,13 @@ writemetricsfun <- function(metrics,
                             th1 = NA,
                             th2 = NA){
   
-  if (is_single) {
-    # Print the Thresholds into logfile
-    write("=======================",logfile)
-    write(sprintf("TMS thresholds"),logfile)
-    write("=======================",logfile)
-    write(paste(sprintf('Threshold_1: %.4f ', th1)), logfile)
-    write(paste(sprintf('Threshold_2: %.4f ', th2)), logfile)
-  }
-  
+  # Print the Thresholds into logfile
+  write("=======================",logfile)
+  write(sprintf("TMS thresholds"),logfile)
+  write("=======================",logfile)
+  write(paste(sprintf('Threshold_1: %.4f ', th1)), logfile)
+  write(paste(sprintf('Threshold_2: %.4f ', th2)), logfile)
+
   # Print the metrics dataframe into logfile
   write("=======================",logfile)
   write(sprintf("Metrics for %d test",num_tests),logfile)
@@ -1057,4 +1098,4 @@ rankscorefun <- function(metrics,
   rank_score <- model_df$Performance_level_weight %*% pm_df$Weight
   
   return(as.numeric(rank_score))
-}
+  }
