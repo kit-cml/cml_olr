@@ -174,10 +174,6 @@ run_all <- function(results_folder = 'results',
     # if (!is_single) {
       th1 <- -(alphas[1] - alphas[2] ) / 2.0 - log(1.0 - 2.0 * exp(alphas[1] - alphas[2]))
       th2 <- -th1
-    # } else {
-    #   th1 <- - 1.0 / betas[1] * (- alphas[1] + log(1.0 - 2.0 * exp(alphas[1] - alphas[2])))
-    #   th2 <- 1.0 / betas[1] * (alphas[1] + log(exp(alphas[2] - alphas[1]) - 2.0))
-    # }
 
     # Plot TMS for training dataset
     label_colors <- c("low" = "green", "intermediate" = "blue", "high" = "red")
@@ -198,9 +194,6 @@ run_all <- function(results_folder = 'results',
                  title = "Training dataset",
                  file_name = filename_training,
                  tms_name = "TMS")
-      # ,
-      #            is_single = is_single)
-      # Plot TMS for testing dataset
       tmsplotfun(data = ordinaldf_test,
                  th1 = th1,
                  th2 = th2,
@@ -208,33 +201,6 @@ run_all <- function(results_folder = 'results',
                  title = "Testing dataset",
                  file_name = filename_testing,
                  tms_name = "TMS")
-      # ,
-      #            is_single = is_single)
-    # } else {
-      # tms_name <- as.character(features_vector[1])
-      # filename_training <- paste(results_folder,"/",paste(tms_name,"training_dataset.jpg",sep = "_"), sep = "")
-      # filename_testing <- paste(results_folder,"/",paste(tms_name,"testing_dataset.jpg",sep = "_"), sep = "")
-      # Plot TMS for training dataset
-      # tmsplotfun(data = ordinaldf,
-      #            th1 = th1,
-      #            th2 = th2,
-      #            label_colors = label_colors,
-      #            title = "Training dataset",
-      #            file_name = filename_training,
-      #            tms_name = tms_name,
-      #            tms_unit = as.character(units_vector[1]),
-      #            is_single = is_single)
-      # Plot TMS for testing dataset
-      # tmsplotfun(data = ordinaldf_test,
-      #            th1 = th1,
-      #            th2 = th2,
-      #            label_colors = label_colors,
-      #            title = "Testing dataset",
-      #            file_name = filename_testing,
-      #            tms_name = tms_name,
-      #            tms_unit = as.character(units_vector[1]),
-      #            is_single = is_single)
-    # }
   } else {
     return(NA)
   }
@@ -596,7 +562,7 @@ tmsplotfun <- function(data, th1, th2, label_colors, title, file_name, tms_name,
   data$drug_name <- factor(data$drug_name, levels = unique(data$drug_name[order(data$label)]))
   tms <- tms_name
   plot <- ggplot(data, aes_string(x = tms_name, y = "drug_name", fill = "risk")) +
-    geom_boxplot(color = "black", width = 0.5, size = 0.2, outlier.size = 0.5, ) +
+    geom_boxplot(color = "black", width = 0.5, size = 0.2, outlier.size = 0.5, outlier.shape = NA) +
     labs(title = title, x = tms, y = "") +
     geom_vline(xintercept = th1, linetype = "dashed", color = "blue", size = 1)  +
     geom_vline(xintercept = th2, linetype = "dashed", color = "red", size = 1)  +
@@ -612,7 +578,7 @@ tmsplotfun <- function(data, th1, th2, label_colors, title, file_name, tms_name,
           legend.title = element_text(size = 10), # Legend title font size
           legend.text = element_text(size = 8) # Legend text font size
     )
-  ggsave(file_name, plot, width = 8, height = 6, dpi = 300)
+  ggsave(file_name, plot, width = 8, height = 6, dpi = 900)
 }
 
 scatterplotfun <- function(data, 
@@ -663,7 +629,7 @@ scatterplotfun <- function(data,
     unit_1 <- ""
     unit_2 <- ""
   }
-  jpeg(paste(results_folder,"/",paste(feature_1,feature_2,file_name,"dataset.jpg",sep = "_"), sep = ""),quality = 100, units = "in", width = 5, height = 5, res = 300)
+  jpeg(paste(results_folder,"/",paste(feature_1,feature_2,file_name,"dataset.jpg",sep = "_"), sep = ""),quality = 100, units = "in", width = 5, height = 5, res = 900)
   plot(data[,idx_model_1], 
        data[,idx_model_2], 
        xlab = paste(feature_1, unit_1, sep = " "), 
@@ -685,24 +651,6 @@ scatterplotfun <- function(data,
   }
   dev.off()
 }
-
-# pairsdfinitfun <- function(features, units){
-#   pairsdf <- data.frame()
-#   for (i in 1:(length(features) - 1)) {
-#     for (j in (i + 1):length(features)) {
-#       feature_1 <- features[i]
-#       feature_2 <- features[j]
-#       unit_1 <- units[i]
-#       unit_2 <- units[j]
-#       tempdf <- data.frame(feature_1 = feature_1,
-#                            feature_2 = feature_2,
-#                            unit_1 = unit_1,
-#                            unit_2 = unit_2)
-#       pairsdf <- rbind(pairsdf,tempdf)
-#     }# feature_1
-#   } # feature_2
-#   return(pairsdf)
-# }
 
 pairsdfinitfun <- function(features, units, dimension) {
   if (dimension > length(features)) {

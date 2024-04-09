@@ -48,10 +48,10 @@ filepath_training <- "C:/Users/USER-PC/OneDrive - Universitas Airlangga/5. CML/4
 filepath_testing <- "C:/Users/USER-PC/OneDrive - Universitas Airlangga/5. CML/4. Data_Ali_E/5. MLR_ORD_TOMEK/data/5. dynamic_hERG_li/metrics_li_testing_avg.csv"
 
 # Set the number of tests
-num_tests <- 10000
+num_tests <- 1
 
 # Set feature dimension
-dimension <- 11
+dimension <- 2
 
 # Create pairsdf with all unique combinations
 pairsdf <- pairsdfinitfun(features = features, units = units, dimension = dimension)
@@ -81,7 +81,7 @@ if (!dir.exists(results_folder)) {
 }
 
 # Register parallel backend
-numCores <- 1
+numCores <- 5
 cl <- makeCluster(numCores)
 registerDoParallel(cl)
 
