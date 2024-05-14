@@ -205,8 +205,8 @@ run_all <- function(results_folder = 'results',
     return(NA)
   }
 
-  # Preallocate the metrics dataframe
-  metrics <- data.frame()
+  # Preallocate the pmeasures dataframe
+  pmeasures <- data.frame()
 
   # Preallocate the drug test predictions
   drugs_predict <- data.frame(
@@ -284,16 +284,16 @@ run_all <- function(results_folder = 'results',
     training_data <- sampled_rows
     training_data["is_training"] <- 1
 
-    # Calculate all metrics
-    tempmetrics <- metricsfun(training_data = training_data,
+    # Calculate all pmeasures
+    temppmeasures <- pmeasuresfun(training_data = training_data,
                               test_data = test_data,
                               mod = mod,
                               label_values = values,
                               tms_name = tms_name,
                               is_whole = FALSE)
 
-    # Store the calculated metrics
-    metrics <- rbind(metrics,tempmetrics)
+    # Store the calculated pmeasures
+    pmeasures <- rbind(pmeasures,temppmeasures)
 
     # Fill the drug prediction row by row
     predicted_labels_test <- predict(mod, newdata = test_data, type = "class")
@@ -322,16 +322,16 @@ run_all <- function(results_folder = 'results',
   predicted_labels_testing <- predict(mod, newdata = ordinaldf_test, type = "class")
   pred_err_testing <- (abs(as.integer(predicted_labels_testing) - as.integer(ordinaldf_test$label)))
 
-  # Calculate the metrics for the whole dataset
+  # Calculate the pmeasures for the whole dataset
   ordinaldf["is_training"] = as.integer(1)
   ordinaldf_test["is_training"] = as.integer(0)
-  metrics_training_data <- metricsfun(training_data = ordinaldf,
+  pmeasures_training_data <- pmeasuresfun(training_data = ordinaldf,
                                    test_data = ordinaldf,
                                    mod = mod,
                                    label_values = values,
                                    tms_name = tms_name,
                                    is_whole = TRUE)
-  metrics_testing_data <- metricsfun(training_data = ordinaldf,
+  pmeasures_testing_data <- pmeasuresfun(training_data = ordinaldf,
                                      test_data = ordinaldf_test,
                                      mod = mod,
                                      label_values = values,
@@ -339,8 +339,8 @@ run_all <- function(results_folder = 'results',
                                      is_whole = TRUE)
 
   if (!is_single) {
-    # Save the metrics dataframe
-    write.csv(metrics, paste(results_folder,"/",paste(log_filename,"metrics.csv",sep = "_"), sep = ""), row.names = FALSE)
+    # Save the pmeasures dataframe
+    write.csv(pmeasures, paste(results_folder,"/",paste(log_filename,"pmeasures.csv",sep = "_"), sep = ""), row.names = FALSE)
 
     # Save the drug_predict dataframe
     write.csv(drugs_predict, paste(results_folder,"/",paste(log_filename,"drugs_predict.csv",sep = "_"), sep = ""), row.names = FALSE)
@@ -348,16 +348,16 @@ run_all <- function(results_folder = 'results',
     # Save the drug_tms dataframe
     write.csv(drugs_tms, paste(results_folder,"/",paste(log_filename,"drugs_tms.csv",sep = "_"), sep = ""), row.names = FALSE)
   } else {
-    # Save the metrics dataframe
-    write.csv(metrics, paste(results_folder,"/",paste(log_filename,"metrics.csv",sep = "_"), sep = ""), row.names = FALSE)
+    # Save the pmeasures dataframe
+    write.csv(pmeasures, paste(results_folder,"/",paste(log_filename,"pmeasures.csv",sep = "_"), sep = ""), row.names = FALSE)
     
     # Save the drug_predict dataframe
     write.csv(drugs_predict, paste(results_folder,"/",paste(log_filename,"drugs_predict.csv",sep = "_"), sep = ""), row.names = FALSE)
   }
 
-  writemetricsfun(metrics = metrics,
-                  metrics_training_data = metrics_training_data,
-                  metrics_testing_data = metrics_testing_data,
+  writepmeasuresfun(pmeasures = pmeasures,
+                  pmeasures_training_data = pmeasures_training_data,
+                  pmeasures_testing_data = pmeasures_testing_data,
                   pred_error_training = pred_err_training,
                   pred_error_testing = pred_err_testing,
                   logfile = logfile,
@@ -369,38 +369,38 @@ run_all <- function(results_folder = 'results',
   close(logfile)
 
   # Rank score for the OLR model
-  rank_score <- rankscorefun(metrics = metrics,
+  rank_score <- rankscorefun(pmeasures = pmeasures,
                              pred_error = pred_err_testing,
                              is_normalized = TRUE)
 
-  # Store summary of metrics to summarydf
+  # Store summary of pmeasures to summarydf
   feature_pair_name <- log_filename
 
   summarydf <- data.frame(
     Feature_Pair = feature_pair_name,
-    Accuracy_Class_1 = quantile(metrics$Accuracy_Class_1, 0.025),
-    Accuracy_Class_2 = quantile(metrics$Accuracy_Class_2, 0.025),
-    Accuracy_Class_3 = quantile(metrics$Accuracy_Class_3, 0.025),
-    AUC_Class_1 = quantile(metrics$AUC_Class_1, 0.025),
-    AUC_Class_2 = quantile(metrics$AUC_Class_2, 0.025),
-    AUC_Class_3 = quantile(metrics$AUC_Class_3, 0.025),
-    Sensitivity_class_1 = quantile(metrics$Sensitivity_class_1, 0.025),
-    Sensitivity_class_2 = quantile(metrics$Sensitivity_class_2, 0.025),
-    Sensitivity_class_3 = quantile(metrics$Sensitivity_class_3, 0.025),
-    Specificity_class_1 = quantile(metrics$Specificity_class_1, 0.025),
-    Specificity_class_2 = quantile(metrics$Specificity_class_2, 0.025),
-    Specificity_class_3 = quantile(metrics$Specificity_class_3, 0.025),
-    LR_positive_class_1 = quantile(metrics$LR_positive_class_1, 0.025),
-    LR_positive_class_2 = quantile(metrics$LR_positive_class_2, 0.025),
-    LR_positive_class_3 = quantile(metrics$LR_positive_class_3, 0.025),
-    LR_negative_class_1 = quantile(metrics$LR_negative_class_1, 0.975),
-    LR_negative_class_2 = quantile(metrics$LR_negative_class_2, 0.975),
-    LR_negative_class_3 = quantile(metrics$LR_negative_class_3, 0.975),
-    F1score_class_1 = quantile(metrics$F1score_class_1, 0.025),
-    F1score_class_2 = quantile(metrics$F1score_class_2, 0.025),
-    F1score_class_3 = quantile(metrics$F1score_class_3, 0.025),
+    Accuracy_Class_1 = quantile(pmeasures$Accuracy_Class_1, 0.025),
+    Accuracy_Class_2 = quantile(pmeasures$Accuracy_Class_2, 0.025),
+    Accuracy_Class_3 = quantile(pmeasures$Accuracy_Class_3, 0.025),
+    AUC_Class_1 = quantile(pmeasures$AUC_Class_1, 0.025),
+    AUC_Class_2 = quantile(pmeasures$AUC_Class_2, 0.025),
+    AUC_Class_3 = quantile(pmeasures$AUC_Class_3, 0.025),
+    Sensitivity_class_1 = quantile(pmeasures$Sensitivity_class_1, 0.025),
+    Sensitivity_class_2 = quantile(pmeasures$Sensitivity_class_2, 0.025),
+    Sensitivity_class_3 = quantile(pmeasures$Sensitivity_class_3, 0.025),
+    Specificity_class_1 = quantile(pmeasures$Specificity_class_1, 0.025),
+    Specificity_class_2 = quantile(pmeasures$Specificity_class_2, 0.025),
+    Specificity_class_3 = quantile(pmeasures$Specificity_class_3, 0.025),
+    LR_positive_class_1 = quantile(pmeasures$LR_positive_class_1, 0.025),
+    LR_positive_class_2 = quantile(pmeasures$LR_positive_class_2, 0.025),
+    LR_positive_class_3 = quantile(pmeasures$LR_positive_class_3, 0.025),
+    LR_negative_class_1 = quantile(pmeasures$LR_negative_class_1, 0.975),
+    LR_negative_class_2 = quantile(pmeasures$LR_negative_class_2, 0.975),
+    LR_negative_class_3 = quantile(pmeasures$LR_negative_class_3, 0.975),
+    F1score_class_1 = quantile(pmeasures$F1score_class_1, 0.025),
+    F1score_class_2 = quantile(pmeasures$F1score_class_2, 0.025),
+    F1score_class_3 = quantile(pmeasures$F1score_class_3, 0.025),
     Classification_error = mean(pred_err_testing) + 1.96 * sd(pred_err_testing) / sqrt(length(pred_err_testing)),
-    Pairwise_classification_accuracy = quantile(metrics$Pairwise, 0.025),
+    Pairwise_classification_accuracy = quantile(pmeasures$Pairwise, 0.025),
     Rank_score = rank_score
   )
   
@@ -452,7 +452,7 @@ aucrocfun <- function(data, mod, label_values){
   return(auc_scores)
 }
 
-metricsfun <- function(training_data, test_data, mod, label_values, tms_name = "TMS", is_whole){
+pmeasuresfun <- function(training_data, test_data, mod, label_values, tms_name = "TMS", is_whole){
   # Calculate the accuracy and AUC for each class
   predicted_labels_test <- predict(mod, newdata = test_data, type = "class")
   
@@ -517,8 +517,8 @@ metricsfun <- function(training_data, test_data, mod, label_values, tms_name = "
     pairwise <- pairwisefun(complete_data)
   }
   
-  # Fill the metrics row by row
-  metrics <- data.frame(
+  # Fill the pmeasures row by row
+  pmeasures <- data.frame(
     TP_class_1 = tp_class_1,
     TP_class_2 = tp_class_2,
     TP_class_3 = tp_class_3,
@@ -555,7 +555,7 @@ metricsfun <- function(training_data, test_data, mod, label_values, tms_name = "
     Pairwise = pairwise
   )
   
-  return(metrics)
+  return(pmeasures)
 }
 
 tmsplotfun <- function(data, th1, th2, label_colors, title, file_name, tms_name, tms_unit){
@@ -714,9 +714,9 @@ solvepair <- function(results_folder,
   return(resultdf)
 }
 
-writemetricsfun <- function(metrics, 
-                            metrics_training_data, 
-                            metrics_testing_data, 
+writepmeasuresfun <- function(pmeasures, 
+                            pmeasures_training_data, 
+                            pmeasures_testing_data, 
                             pred_error_training,
                             pred_error_testing,
                             logfile,
@@ -731,114 +731,114 @@ writemetricsfun <- function(metrics,
   write(paste(sprintf('Threshold_1: %.4f ', th1)), logfile)
   write(paste(sprintf('Threshold_2: %.4f ', th2)), logfile)
 
-  # Print the metrics dataframe into logfile
+  # Print the pmeasures dataframe into logfile
   write("=======================",logfile)
-  write(sprintf("Metrics for %d test",num_tests),logfile)
+  write(sprintf("Performance measures for %d test",num_tests),logfile)
   write("=======================",logfile)
   write(sprintf('AUC of low risk: %.4f (%.4f, %.4f)',
-                median(metrics$AUC_Class_1),
-                quantile(metrics$AUC_Class_1, 0.025),
-                quantile(metrics$AUC_Class_1, 0.975)),
+                median(pmeasures$AUC_Class_1),
+                quantile(pmeasures$AUC_Class_1, 0.025),
+                quantile(pmeasures$AUC_Class_1, 0.975)),
         logfile)
   write(sprintf('AUC of intermediate risk: %.4f (%.4f, %.4f)',
-                median(metrics$AUC_Class_2),
-                quantile(metrics$AUC_Class_2, 0.025),
-                quantile(metrics$AUC_Class_2, 0.975)),
+                median(pmeasures$AUC_Class_2),
+                quantile(pmeasures$AUC_Class_2, 0.025),
+                quantile(pmeasures$AUC_Class_2, 0.975)),
         logfile)
   write(sprintf('AUC of high risk: %.4f (%.4f, %.4f)',
-                median(metrics$AUC_Class_3),
-                quantile(metrics$AUC_Class_3, 0.025),
-                quantile(metrics$AUC_Class_3, 0.975)),
+                median(pmeasures$AUC_Class_3),
+                quantile(pmeasures$AUC_Class_3, 0.025),
+                quantile(pmeasures$AUC_Class_3, 0.975)),
         logfile)
   write(sprintf('Accuracy of low risk: %.4f (%.4f, %.4f)',
-                median(metrics$Accuracy_Class_1),
-                quantile(metrics$Accuracy_Class_1, 0.025),
-                quantile(metrics$Accuracy_Class_1, 0.975)),
+                median(pmeasures$Accuracy_Class_1),
+                quantile(pmeasures$Accuracy_Class_1, 0.025),
+                quantile(pmeasures$Accuracy_Class_1, 0.975)),
         logfile)
   write(sprintf('Accuracy of intermediate risk: %.4f (%.4f, %.4f)',
-                median(metrics$Accuracy_Class_2),
-                quantile(metrics$Accuracy_Class_2, 0.025),
-                quantile(metrics$Accuracy_Class_2, 0.975)),
+                median(pmeasures$Accuracy_Class_2),
+                quantile(pmeasures$Accuracy_Class_2, 0.025),
+                quantile(pmeasures$Accuracy_Class_2, 0.975)),
         logfile)
   write(sprintf('Accuracy of high risk: %.4f (%.4f, %.4f)',
-                median(metrics$Accuracy_Class_3),
-                quantile(metrics$Accuracy_Class_3, 0.025),
-                quantile(metrics$Accuracy_Class_3, 0.975)),
+                median(pmeasures$Accuracy_Class_3),
+                quantile(pmeasures$Accuracy_Class_3, 0.025),
+                quantile(pmeasures$Accuracy_Class_3, 0.975)),
         logfile)
   write(sprintf('Sensitivity of low risk: %.4f (%.4f, %.4f)',
-                median(metrics$Sensitivity_class_1),
-                quantile(metrics$Sensitivity_class_1, 0.025),
-                quantile(metrics$Sensitivity_class_1, 0.975)),
+                median(pmeasures$Sensitivity_class_1),
+                quantile(pmeasures$Sensitivity_class_1, 0.025),
+                quantile(pmeasures$Sensitivity_class_1, 0.975)),
         logfile)
   write(sprintf('Sensitivity of intermediate risk: %.4f (%.4f, %.4f)',
-                median(metrics$Sensitivity_class_2),
-                quantile(metrics$Sensitivity_class_2, 0.025),
-                quantile(metrics$Sensitivity_class_2, 0.975)),
+                median(pmeasures$Sensitivity_class_2),
+                quantile(pmeasures$Sensitivity_class_2, 0.025),
+                quantile(pmeasures$Sensitivity_class_2, 0.975)),
         logfile)
   write(sprintf('Sensitivity of high risk: %.4f (%.4f, %.4f)',
-                median(metrics$Sensitivity_class_3),
-                quantile(metrics$Sensitivity_class_3, 0.025),
-                quantile(metrics$Sensitivity_class_3, 0.975)),
+                median(pmeasures$Sensitivity_class_3),
+                quantile(pmeasures$Sensitivity_class_3, 0.025),
+                quantile(pmeasures$Sensitivity_class_3, 0.975)),
         logfile)
   write(sprintf('Specificity of low risk: %.4f (%.4f, %.4f)',
-                median(metrics$Specificity_class_1),
-                quantile(metrics$Specificity_class_1, 0.025),
-                quantile(metrics$Specificity_class_1, 0.975)),
+                median(pmeasures$Specificity_class_1),
+                quantile(pmeasures$Specificity_class_1, 0.025),
+                quantile(pmeasures$Specificity_class_1, 0.975)),
         logfile)
   write(sprintf('Specificity of intermediate risk: %.4f (%.4f, %.4f)',
-                median(metrics$Specificity_class_2),
-                quantile(metrics$Specificity_class_2, 0.025),
-                quantile(metrics$Specificity_class_2, 0.975)),
+                median(pmeasures$Specificity_class_2),
+                quantile(pmeasures$Specificity_class_2, 0.025),
+                quantile(pmeasures$Specificity_class_2, 0.975)),
         logfile)
   write(sprintf('Specificity of high risk: %.4f (%.4f, %.4f)',
-                median(metrics$Specificity_class_3),
-                quantile(metrics$Specificity_class_3, 0.025),
-                quantile(metrics$Specificity_class_3, 0.975)),
+                median(pmeasures$Specificity_class_3),
+                quantile(pmeasures$Specificity_class_3, 0.025),
+                quantile(pmeasures$Specificity_class_3, 0.975)),
         logfile)
   write(sprintf('LR+ of low risk: %.4f (%.4f, %.4f)',
-                median(metrics$LR_positive_class_1),
-                quantile(metrics$LR_positive_class_1, 0.025),
-                quantile(metrics$LR_positive_class_1, 0.975)),
+                median(pmeasures$LR_positive_class_1),
+                quantile(pmeasures$LR_positive_class_1, 0.025),
+                quantile(pmeasures$LR_positive_class_1, 0.975)),
         logfile)
   write(sprintf('LR+ of intermediate risk: %.4f (%.4f, %.4f)',
-                median(metrics$LR_positive_class_2),
-                quantile(metrics$LR_positive_class_2, 0.025),
-                quantile(metrics$LR_positive_class_2, 0.975)),
+                median(pmeasures$LR_positive_class_2),
+                quantile(pmeasures$LR_positive_class_2, 0.025),
+                quantile(pmeasures$LR_positive_class_2, 0.975)),
         logfile)
   write(sprintf('LR+ of high risk: %.4f (%.4f, %.4f)',
-                median(metrics$LR_positive_class_3),
-                quantile(metrics$LR_positive_class_3, 0.025),
-                quantile(metrics$LR_positive_class_3, 0.975)),
+                median(pmeasures$LR_positive_class_3),
+                quantile(pmeasures$LR_positive_class_3, 0.025),
+                quantile(pmeasures$LR_positive_class_3, 0.975)),
         logfile)
   write(sprintf('LR- of low risk: %.4f (%.4f, %.4f)',
-                median(metrics$LR_negative_class_1),
-                quantile(metrics$LR_negative_class_1, 0.025),
-                quantile(metrics$LR_negative_class_1, 0.975)),
+                median(pmeasures$LR_negative_class_1),
+                quantile(pmeasures$LR_negative_class_1, 0.025),
+                quantile(pmeasures$LR_negative_class_1, 0.975)),
         logfile)
   write(sprintf('LR- of intermediate risk: %.4f (%.4f, %.4f)',
-                median(metrics$LR_negative_class_2),
-                quantile(metrics$LR_negative_class_2, 0.025),
-                quantile(metrics$LR_negative_class_2, 0.975)),
+                median(pmeasures$LR_negative_class_2),
+                quantile(pmeasures$LR_negative_class_2, 0.025),
+                quantile(pmeasures$LR_negative_class_2, 0.975)),
         logfile)
   write(sprintf('LR- of high risk: %.4f (%.4f, %.4f)',
-                median(metrics$LR_negative_class_3),
-                quantile(metrics$LR_negative_class_3, 0.025),
-                quantile(metrics$LR_negative_class_3, 0.975)),
+                median(pmeasures$LR_negative_class_3),
+                quantile(pmeasures$LR_negative_class_3, 0.025),
+                quantile(pmeasures$LR_negative_class_3, 0.975)),
         logfile)
   write(sprintf('F1score of low risk: %.4f (%.4f, %.4f)',
-                median(metrics$F1score_class_1),
-                quantile(metrics$F1score_class_1, 0.025),
-                quantile(metrics$F1score_class_1, 0.975)),
+                median(pmeasures$F1score_class_1),
+                quantile(pmeasures$F1score_class_1, 0.025),
+                quantile(pmeasures$F1score_class_1, 0.975)),
         logfile)
   write(sprintf('F1score of intermediate risk: %.4f (%.4f, %.4f)',
-                median(metrics$F1score_class_2),
-                quantile(metrics$F1score_class_2, 0.025),
-                quantile(metrics$F1score_class_2, 0.975)),
+                median(pmeasures$F1score_class_2),
+                quantile(pmeasures$F1score_class_2, 0.025),
+                quantile(pmeasures$F1score_class_2, 0.975)),
         logfile)
   write(sprintf('F1score of high risk: %.4f (%.4f, %.4f)',
-                median(metrics$F1score_class_3),
-                quantile(metrics$F1score_class_3, 0.025),
-                quantile(metrics$F1score_class_3, 0.975)),
+                median(pmeasures$F1score_class_3),
+                quantile(pmeasures$F1score_class_3, 0.025),
+                quantile(pmeasures$F1score_class_3, 0.975)),
         logfile)
   write(sprintf('Classification error: %.4f (%.4f, %.4f)',
                 mean(pred_error_testing),
@@ -846,70 +846,70 @@ writemetricsfun <- function(metrics,
                 mean(pred_error_testing) + 1.96 * sd(pred_error_testing) / sqrt(length(pred_error_testing))),
         logfile)
   write(sprintf('Pairwise classification accuracy: %.4f (%.4f, %.4f)',
-                median(metrics$Pairwise),
-                quantile(metrics$Pairwise, 0.025),
-                quantile(metrics$Pairwise, 0.975)),
+                median(pmeasures$Pairwise),
+                quantile(pmeasures$Pairwise, 0.025),
+                quantile(pmeasures$Pairwise, 0.975)),
         logfile)
   
   write("==============================",logfile)
-  write("Metrics for whole training data",logfile)
+  write("Performance measures for whole training data",logfile)
   write("==============================",logfile)
-  write(sprintf('AUC of low risk: %.4f',metrics_training_data$AUC_Class_1),logfile)
-  write(sprintf('AUC of intermediate risk: %.4f',metrics_training_data$AUC_Class_2),logfile)
-  write(sprintf('AUC of high risk: %.4f',metrics_training_data$AUC_Class_3),logfile)
-  write(sprintf('Accuracy of low risk: %.4f',metrics_training_data$Accuracy_Class_1),logfile)
-  write(sprintf('Accuracy of intermediate risk: %.4f',metrics_training_data$Accuracy_Class_2),logfile)
-  write(sprintf('Accuracy of high risk: %.4f',metrics_training_data$Accuracy_Class_3),logfile)
-  write(sprintf('Sensitivity of low risk: %.4f',metrics_training_data$Sensitivity_class_1),logfile)
-  write(sprintf('Sensitivity of intermediate risk: %.4f',metrics_training_data$Sensitivity_class_2),logfile)
-  write(sprintf('Sensitivity of high risk: %.4f',metrics_training_data$Sensitivity_class_3),logfile)
-  write(sprintf('Specificity of low risk: %.4f',metrics_training_data$Specificity_class_1),logfile)
-  write(sprintf('Specificity of intermediate risk: %.4f',metrics_training_data$Specificity_class_2),logfile)
-  write(sprintf('Specificity of high risk: %.4f',metrics_training_data$Specificity_class_3),logfile)
-  write(sprintf('LR+ of low risk: %.4f',metrics_training_data$LR_positive_class_1),logfile)
-  write(sprintf('LR+ of intermediate risk: %.4f',metrics_training_data$LR_positive_class_2),logfile)
-  write(sprintf('LR+ of high risk: %.4f',metrics_training_data$LR_positive_class_3),logfile)
-  write(sprintf('LR- of low risk: %.4f',metrics_training_data$LR_negative_class_1),logfile)
-  write(sprintf('LR- of intermediate risk: %.4f',metrics_training_data$LR_negative_class_2),logfile)
-  write(sprintf('LR- of high risk: %.4f',metrics_training_data$LR_negative_class_3),logfile)
-  write(sprintf('F1score of low risk: %.4f',metrics_training_data$F1score_class_1),logfile)
-  write(sprintf('F1score of intermediate risk: %.4f',metrics_training_data$F1score_class_2),logfile)
-  write(sprintf('F1score of high risk: %.4f',metrics_training_data$F1score_class_3),logfile)
+  write(sprintf('AUC of low risk: %.4f',pmeasures_training_data$AUC_Class_1),logfile)
+  write(sprintf('AUC of intermediate risk: %.4f',pmeasures_training_data$AUC_Class_2),logfile)
+  write(sprintf('AUC of high risk: %.4f',pmeasures_training_data$AUC_Class_3),logfile)
+  write(sprintf('Accuracy of low risk: %.4f',pmeasures_training_data$Accuracy_Class_1),logfile)
+  write(sprintf('Accuracy of intermediate risk: %.4f',pmeasures_training_data$Accuracy_Class_2),logfile)
+  write(sprintf('Accuracy of high risk: %.4f',pmeasures_training_data$Accuracy_Class_3),logfile)
+  write(sprintf('Sensitivity of low risk: %.4f',pmeasures_training_data$Sensitivity_class_1),logfile)
+  write(sprintf('Sensitivity of intermediate risk: %.4f',pmeasures_training_data$Sensitivity_class_2),logfile)
+  write(sprintf('Sensitivity of high risk: %.4f',pmeasures_training_data$Sensitivity_class_3),logfile)
+  write(sprintf('Specificity of low risk: %.4f',pmeasures_training_data$Specificity_class_1),logfile)
+  write(sprintf('Specificity of intermediate risk: %.4f',pmeasures_training_data$Specificity_class_2),logfile)
+  write(sprintf('Specificity of high risk: %.4f',pmeasures_training_data$Specificity_class_3),logfile)
+  write(sprintf('LR+ of low risk: %.4f',pmeasures_training_data$LR_positive_class_1),logfile)
+  write(sprintf('LR+ of intermediate risk: %.4f',pmeasures_training_data$LR_positive_class_2),logfile)
+  write(sprintf('LR+ of high risk: %.4f',pmeasures_training_data$LR_positive_class_3),logfile)
+  write(sprintf('LR- of low risk: %.4f',pmeasures_training_data$LR_negative_class_1),logfile)
+  write(sprintf('LR- of intermediate risk: %.4f',pmeasures_training_data$LR_negative_class_2),logfile)
+  write(sprintf('LR- of high risk: %.4f',pmeasures_training_data$LR_negative_class_3),logfile)
+  write(sprintf('F1score of low risk: %.4f',pmeasures_training_data$F1score_class_1),logfile)
+  write(sprintf('F1score of intermediate risk: %.4f',pmeasures_training_data$F1score_class_2),logfile)
+  write(sprintf('F1score of high risk: %.4f',pmeasures_training_data$F1score_class_3),logfile)
   write(sprintf('Classification error: %.4f (%.4f, %.4f)',
                 mean(pred_error_training),
                 mean(pred_error_training) - 1.96 * sd(pred_error_training) / sqrt(length(pred_error_training)),
                 mean(pred_error_training) + 1.96 * sd(pred_error_training) / sqrt(length(pred_error_training))),
         logfile)
-  write(sprintf('Pairwise classification accuracy: %.4f',metrics_training_data$Pairwise),logfile)
+  write(sprintf('Pairwise classification accuracy: %.4f',pmeasures_training_data$Pairwise),logfile)
   
   write("==============================",logfile)
-  write("Metrics for whole testing data",logfile)
+  write("Performance measures for whole testing data",logfile)
   write("==============================",logfile)
-  write(sprintf('AUC of low risk: %.4f',metrics_testing_data$AUC_Class_1),logfile)
-  write(sprintf('AUC of intermediate risk: %.4f',metrics_testing_data$AUC_Class_2),logfile)
-  write(sprintf('AUC of high risk: %.4f',metrics_testing_data$AUC_Class_3),logfile)
-  write(sprintf('Accuracy of low risk: %.4f',metrics_testing_data$Accuracy_Class_1),logfile)
-  write(sprintf('Accuracy of intermediate risk: %.4f',metrics_testing_data$Accuracy_Class_2),logfile)
-  write(sprintf('Accuracy of high risk: %.4f',metrics_testing_data$Accuracy_Class_3),logfile)
-  write(sprintf('Sensitivity of low risk: %.4f',metrics_testing_data$Sensitivity_class_1),logfile)
-  write(sprintf('Sensitivity of intermediate risk: %.4f',metrics_testing_data$Sensitivity_class_2),logfile)
-  write(sprintf('Sensitivity of high risk: %.4f',metrics_testing_data$Sensitivity_class_3),logfile)
-  write(sprintf('Specificity of low risk: %.4f',metrics_testing_data$Specificity_class_1),logfile)
-  write(sprintf('Specificity of intermediate risk: %.4f',metrics_testing_data$Specificity_class_2),logfile)
-  write(sprintf('Specificity of high risk: %.4f',metrics_testing_data$Specificity_class_3),logfile)
-  write(sprintf('LR+ of low risk: %.4f',metrics_testing_data$LR_positive_class_1),logfile)
-  write(sprintf('LR+ of intermediate risk: %.4f',metrics_testing_data$LR_positive_class_2),logfile)
-  write(sprintf('LR+ of high risk: %.4f',metrics_testing_data$LR_positive_class_3),logfile)
-  write(sprintf('LR- of low risk: %.4f',metrics_testing_data$LR_negative_class_1),logfile)
-  write(sprintf('LR- of intermediate risk: %.4f',metrics_testing_data$LR_negative_class_2),logfile)
-  write(sprintf('LR- of high risk: %.4f',metrics_testing_data$LR_negative_class_3),logfile)
-  write(sprintf('F1score of low risk: %.4f',metrics_testing_data$F1score_class_1),logfile)
-  write(sprintf('F1score of intermediate risk: %.4f',metrics_testing_data$F1score_class_2),logfile)
-  write(sprintf('F1score of high risk: %.4f',metrics_testing_data$F1score_class_3),logfile)
-  write(sprintf('Pairwise classification accuracy: %.4f',metrics_testing_data$Pairwise),logfile)
+  write(sprintf('AUC of low risk: %.4f',pmeasures_testing_data$AUC_Class_1),logfile)
+  write(sprintf('AUC of intermediate risk: %.4f',pmeasures_testing_data$AUC_Class_2),logfile)
+  write(sprintf('AUC of high risk: %.4f',pmeasures_testing_data$AUC_Class_3),logfile)
+  write(sprintf('Accuracy of low risk: %.4f',pmeasures_testing_data$Accuracy_Class_1),logfile)
+  write(sprintf('Accuracy of intermediate risk: %.4f',pmeasures_testing_data$Accuracy_Class_2),logfile)
+  write(sprintf('Accuracy of high risk: %.4f',pmeasures_testing_data$Accuracy_Class_3),logfile)
+  write(sprintf('Sensitivity of low risk: %.4f',pmeasures_testing_data$Sensitivity_class_1),logfile)
+  write(sprintf('Sensitivity of intermediate risk: %.4f',pmeasures_testing_data$Sensitivity_class_2),logfile)
+  write(sprintf('Sensitivity of high risk: %.4f',pmeasures_testing_data$Sensitivity_class_3),logfile)
+  write(sprintf('Specificity of low risk: %.4f',pmeasures_testing_data$Specificity_class_1),logfile)
+  write(sprintf('Specificity of intermediate risk: %.4f',pmeasures_testing_data$Specificity_class_2),logfile)
+  write(sprintf('Specificity of high risk: %.4f',pmeasures_testing_data$Specificity_class_3),logfile)
+  write(sprintf('LR+ of low risk: %.4f',pmeasures_testing_data$LR_positive_class_1),logfile)
+  write(sprintf('LR+ of intermediate risk: %.4f',pmeasures_testing_data$LR_positive_class_2),logfile)
+  write(sprintf('LR+ of high risk: %.4f',pmeasures_testing_data$LR_positive_class_3),logfile)
+  write(sprintf('LR- of low risk: %.4f',pmeasures_testing_data$LR_negative_class_1),logfile)
+  write(sprintf('LR- of intermediate risk: %.4f',pmeasures_testing_data$LR_negative_class_2),logfile)
+  write(sprintf('LR- of high risk: %.4f',pmeasures_testing_data$LR_negative_class_3),logfile)
+  write(sprintf('F1score of low risk: %.4f',pmeasures_testing_data$F1score_class_1),logfile)
+  write(sprintf('F1score of intermediate risk: %.4f',pmeasures_testing_data$F1score_class_2),logfile)
+  write(sprintf('F1score of high risk: %.4f',pmeasures_testing_data$F1score_class_3),logfile)
+  write(sprintf('Pairwise classification accuracy: %.4f',pmeasures_testing_data$Pairwise),logfile)
 }
 
-rankscorefun <- function(metrics,
+rankscorefun <- function(pmeasures,
                          pred_error,
                          is_normalized = TRUE){
   Performance_measures <- c("AUC_Class_1", "AUC_Class_3",
@@ -947,7 +947,7 @@ rankscorefun <- function(metrics,
   # by looking at the 95% confidence interval that match the CiPA's criteria
   
   # AUC_Class_1
-  score_to_check <- quantile(metrics$AUC_Class_1, 0.025)
+  score_to_check <- quantile(pmeasures$AUC_Class_1, 0.025)
   if (score_to_check < 0.7) {
     model_df[model_df$Performance_measure == "AUC_Class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
   } else if (score_to_check >= 0.7 & score_to_check < 0.8) {
@@ -959,7 +959,7 @@ rankscorefun <- function(metrics,
   }
   
   # AUC_Class_3
-  score_to_check <- quantile(metrics$AUC_Class_3, 0.025)
+  score_to_check <- quantile(pmeasures$AUC_Class_3, 0.025)
   if (score_to_check < 0.7) {
     model_df[model_df$Performance_measure == "AUC_Class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
   } else if (score_to_check >= 0.7 & score_to_check < 0.8) {
@@ -971,7 +971,7 @@ rankscorefun <- function(metrics,
   }
   
   # LR_positive_class_1
-  score_to_check <- quantile(metrics$LR_positive_class_1, 0.025)
+  score_to_check <- quantile(pmeasures$LR_positive_class_1, 0.025)
   if (score_to_check < 2.0) {
     model_df[model_df$Performance_measure == "LR_positive_class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
   } else if (score_to_check >= 2.0 & score_to_check < 5.0) {
@@ -983,7 +983,7 @@ rankscorefun <- function(metrics,
   }
   
   # LR_positive_class_3
-  score_to_check <- quantile(metrics$LR_positive_class_3, 0.025)
+  score_to_check <- quantile(pmeasures$LR_positive_class_3, 0.025)
   if (score_to_check < 2.0) {
     model_df[model_df$Performance_measure == "LR_positive_class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
   } else if (score_to_check >= 2.0 & score_to_check < 5.0) {
@@ -995,7 +995,7 @@ rankscorefun <- function(metrics,
   }
   
   # LR_negative_class_1
-  score_to_check <- quantile(metrics$LR_negative_class_1, 0.975)
+  score_to_check <- quantile(pmeasures$LR_negative_class_1, 0.975)
   if (score_to_check > 0.5) {
     model_df[model_df$Performance_measure == "LR_negative_class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
   } else if (score_to_check <= 0.5 & score_to_check > 0.2) {
@@ -1007,7 +1007,7 @@ rankscorefun <- function(metrics,
   }
   
   # LR_negative_class_3
-  score_to_check <- quantile(metrics$LR_negative_class_3, 0.975)
+  score_to_check <- quantile(pmeasures$LR_negative_class_3, 0.975)
   if (score_to_check > 0.5) {
     model_df[model_df$Performance_measure == "LR_negative_class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
   } else if (score_to_check <= 0.5 & score_to_check > 0.2) {
@@ -1019,7 +1019,7 @@ rankscorefun <- function(metrics,
   }
   
   # Pairwise
-  score_to_check <- quantile(metrics$Pairwise, 0.025)
+  score_to_check <- quantile(pmeasures$Pairwise, 0.025)
   if (score_to_check < 0.7) {
     model_df[model_df$Performance_measure == "Pairwise",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
   } else if (score_to_check >= 0.7 & score_to_check < 0.8) {

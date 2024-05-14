@@ -1,7 +1,7 @@
 library(readr)
 
 # Initialize the result folder and features
-result_folder <- "C:/Users/USER-PC/OneDrive - Universitas Airlangga/5. CML/4. Data_Ali_E/5. MLR_ORD_TOMEK/0. Rscript_Multi_OLR/Accepted_models_li"
+result_folder <- "Accepted_models_manual"
 features <- c("qNet", "dvdtmax", "vmax", "vrest", "APD50", "APD90", "max_dv", "camax", "carest", "CaTD50", "CaTD90")
 
 # Initialize a dataframe to store the betas

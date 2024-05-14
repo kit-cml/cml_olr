@@ -4,13 +4,9 @@ library(pROC)
 library(ggplot2)
 library(foreach)
 library(doParallel)
-source("functions.r")
+source("functions.R")
 
-# Declare features
-# features <- c("Comp.1",
-#              "Comp.7")
-# features <- c("LD1","LD2")
-# features <- c("carest",
+# Declare features and units
 features <- c("qNet",
               "dvdtmax",
               "vmax",
@@ -22,9 +18,7 @@ features <- c("qNet",
               "carest",
               "CaTD50",
               "CaTD90")
-# units <- c("","")
-# units <- c("","")
-# units <- c("(mM)",
+
 units <- c("(nC/uF)",
            "(mV/ms)",
            "(mV)",
@@ -38,14 +32,8 @@ units <- c("(nC/uF)",
            "(ms)")
 
 # Declare the file paths
-# filepath_training <- "C:/Users/USER-PC/OneDrive - Universitas Airlangga/5. CML/4. Data_Ali_E/5. MLR_ORD_TOMEK/0. Rscript_Multi_OLR/Results_LDA_PCA/resultPCA_training.csv"
-# filepath_testing <- "C:/Users/USER-PC/OneDrive - Universitas Airlangga/5. CML/4. Data_Ali_E/5. MLR_ORD_TOMEK/0. Rscript_Multi_OLR/Results_LDA_PCA/resultPCA_testing.csv"
-# filepath_training <- "C:/Users/USER-PC/OneDrive - Universitas Airlangga/5. CML/4. Data_Ali_E/5. MLR_ORD_TOMEK/0. Rscript_Multi_OLR/Results_LDA_PCA/resultLDA_training.csv"
-# filepath_testing <- "C:/Users/USER-PC/OneDrive - Universitas Airlangga/5. CML/4. Data_Ali_E/5. MLR_ORD_TOMEK/0. Rscript_Multi_OLR/Results_LDA_PCA/resultLDA_testing.csv"
-# filepath_training <- "C:/Users/USER-PC/OneDrive - Universitas Airlangga/5. CML/4. Data_Ali_E/5. MLR_ORD_TOMEK/data/4. dynamic_hERG_chantest/metrics_chantest_training_avg.csv"
-# filepath_testing <- "C:/Users/USER-PC/OneDrive - Universitas Airlangga/5. CML/4. Data_Ali_E/5. MLR_ORD_TOMEK/data/4. dynamic_hERG_chantest/metrics_chantest_testing_avg.csv"
-filepath_training <- "C:/Users/USER-PC/OneDrive - Universitas Airlangga/5. CML/4. Data_Ali_E/5. MLR_ORD_TOMEK/data/5. dynamic_hERG_li/metrics_li_training_avg.csv"
-filepath_testing <- "C:/Users/USER-PC/OneDrive - Universitas Airlangga/5. CML/4. Data_Ali_E/5. MLR_ORD_TOMEK/data/5. dynamic_hERG_li/metrics_li_testing_avg.csv"
+filepath_training <- "data/manual_training.csv"
+filepath_testing <- "data/manual_testing.csv"
 
 # Set the number of tests
 num_tests <- 1
@@ -60,7 +48,7 @@ pairsdf <- pairsdfinitfun(features = features, units = units, dimension = dimens
 results_folder <- "results"
 
 # Choose whether data needs to be normalized
-is_normalized <- TRUE
+is_normalized <- FALSE
 
 # Check if the folder exists
 if (!dir.exists(results_folder)) {
