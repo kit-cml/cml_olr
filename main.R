@@ -48,7 +48,12 @@ pairsdf <- pairsdfinitfun(features = features, units = units, dimension = dimens
 results_folder <- "results"
 
 # Choose whether data needs to be normalized
-is_normalized <- FALSE
+is_normalized <- TRUE
+
+# Register parallel backend
+numCores <- 5
+cl <- makeCluster(numCores)
+registerDoParallel(cl)
 
 # Check if the folder exists
 if (!dir.exists(results_folder)) {
@@ -67,11 +72,6 @@ if (!dir.exists(results_folder)) {
     cat("The folder is already empty.\n")
   }
 }
-
-# Register parallel backend
-numCores <- 5
-cl <- makeCluster(numCores)
-registerDoParallel(cl)
 
 # Execute the tasks in parallel
 summarydf <- foreach(pair_id = 1:nrow(pairsdf),
