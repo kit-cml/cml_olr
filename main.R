@@ -36,10 +36,10 @@ filepath_training <- "data/manual_training.csv"
 filepath_testing <- "data/manual_testing.csv"
 
 # Set the number of tests
-num_tests <- 1
+num_tests <- 10000
 
 # Set feature dimension
-dimension <- 2
+dimension <- 1
 
 # Create pairsdf with all unique combinations
 pairsdf <- pairsdfinitfun(features = features, units = units, dimension = dimension)
@@ -51,7 +51,7 @@ results_folder <- "results"
 is_normalized <- TRUE
 
 # Register parallel backend
-numCores <- 5
+numCores <- 11
 cl <- makeCluster(numCores)
 registerDoParallel(cl)
 

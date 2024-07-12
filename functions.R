@@ -74,8 +74,10 @@ run_all <- function(results_folder = 'results',
   ordinaldf <- na.omit(ordinaldf)
   ordinaldf_test <- na.omit(ordinaldf_test)
   
+  # =========
   # For LOOCV
-  ordinaldf_loocv <- rbind(ordinaldf,ordinaldf_test)
+  # =========
+  # ordinaldf_loocv <- rbind(ordinaldf,ordinaldf_test)
   
   # Normalize the data
   dimension <- length(features_vector)
@@ -90,12 +92,14 @@ run_all <- function(results_folder = 'results',
     tempdf[1:dimension] <- mapply(function(x, mean, sd) (x - mean) / sd, ordinaldf_test[1:dimension], means, sds)
     ordinaldf_test <- tempdf
     
+    # =========
     # For LOOCV
-    means <- sapply(ordinaldf_loocv[1:dimension], mean)
-    sds <- sapply(ordinaldf_loocv[1:dimension], sd)
-    tempdf <- ordinaldf_loocv
-    tempdf[1:dimension] <- mapply(function(x, mean, sd) (x - mean) / sd, ordinaldf_loocv[1:dimension], means, sds)
-    ordinaldf_loocv <- tempdf
+    # =========
+    # means <- sapply(ordinaldf_loocv[1:dimension], mean)
+    # sds <- sapply(ordinaldf_loocv[1:dimension], sd)
+    # tempdf <- ordinaldf_loocv
+    # tempdf[1:dimension] <- mapply(function(x, mean, sd) (x - mean) / sd, ordinaldf_loocv[1:dimension], means, sds)
+    # ordinaldf_loocv <- tempdf
   }
   
   # Fit the ordinal logistic regression model
@@ -105,105 +109,72 @@ run_all <- function(results_folder = 'results',
 
   # Specify the number of attempts
   max_attempts <- 10000
-
-  # Flag to check if the model has converged
-  converged <- FALSE
-
-  # First trial without start option
-  tryCatch({
-    # Attempt to fit the model without specifying start
-    mod <- polr(formula, data = ordinaldf, Hess = TRUE)
-    converged <- TRUE
-  }, error = function(e) {
-    write(sprintf("First trial without 'start' failed. Retrying..."),logfile)
-  })
-
-  # If the first trial fails, attempt to fit with random starting values
-  attempts <- as.integer(0)
-  if (!converged) {
-    for (attemp_idx in 1:max_attempts) {
-      # Generate random starting values
-      start_values <- rnorm(dimension + 2, mean = 0.0, sd = 100.0)
-
-      # Attempt to fit the model with random starting values
-      tryCatch({
-        mod <- polr(formula, data = ordinaldf, start = start_values, Hess = TRUE)
-        converged <- TRUE
-        break
-      }, error = function(e) {
-        attempts <- attempts + 1
-      })
-    }
-  }
-
-  # If all attempts fail, print a message
-  if (!converged) {
-    write(sprintf("Could not fit the model after %d attempts",max_attempts),logfile)
-
-  } else {
-    # Make predictions for training dataset
-    predicted_labels <- predict(mod, newdata = ordinaldf, type = "class")
-
-    # Variables from Ordinal Logistic Regression model
-    alphas <- as.numeric(mod$zeta)  # Alpha values
-    betas <- as.numeric(mod$coefficients)  # Beta coefficients for all features
-    
-    if (!is_single) {
-      # Apply TMS function row-wise efficiently
-      ordinaldf$TMS <- apply(ordinaldf[, 1:dimension], 1, function(row) TMS(alphas, betas, row))
-      ordinaldf_test$TMS <- apply(ordinaldf_test[, 1:dimension], 1, function(row) TMS(alphas, betas, row))
-    }
-  }
   
+  fit_results <- fitandgetTMS(training_data = ordinaldf,
+                              testing_data = ordinaldf_test,
+                              formula = formula,
+                              dimension = dimension,
+                              is_single = is_single,
+                              max_attempts = max_attempts,
+                              logfile = logfile)
+  ordinaldf <- fit_results$training_data
+  ordinaldf_test <- fit_results$testing_data
+  mod <- fit_results$mod
+  alphas <- as.numeric(mod$zeta)  # Alpha values
+  betas <- as.numeric(mod$coefficients)  # Beta coefficients for all features
+  converged <- fit_results$converged
+  
+  # =========
   # For LOOCV
-  # Flag to check if the model has converged
-  converged_loocv <- FALSE
-  
-  # First trial without start option
-  tryCatch({
-    # Attempt to fit the model without specifying start
-    mod_loocv <- polr(formula, data = ordinaldf_loocv, Hess = TRUE)
-    converged_loocv <- TRUE
-  }, error_loocv = function(e) {
-    write(sprintf("First trial without 'start' failed for LOOCV. Retrying..."),logfile)
-  })
-  
-  # If the first trial fails, attempt to fit with random starting values
-  attempts_loocv <- as.integer(0)
-  if (!converged_loocv) {
-    for (attemp_idx in 1:max_attempts) {
-      # Generate random starting values
-      start_values <- rnorm(dimension + 2, mean = 0.0, sd = 100.0)
-      
-      # Attempt to fit the model with random starting values
-      tryCatch({
-        mod_loocv <- polr(formula, data = ordinaldf_loocv, start = start_values, Hess = TRUE)
-        converged_loocv <- TRUE
-        break
-      }, error_loocv = function(e) {
-        attempts_loocv <- attempts_loocv + 1
-      })
-    }
-  }
-  
-  # If all attempts fail, print a message
-  if (!converged) {
-    write(sprintf("Could not fit the loocv model after %d attempts",max_attempts),logfile)
-    
-  } else {
-    # Make predictions for training dataset
-    predicted_labels <- predict(mod, newdata = ordinaldf, type = "class")
-    
-    # Variables from Ordinal Logistic Regression model
-    alphas <- as.numeric(mod$zeta)  # Alpha values
-    betas <- as.numeric(mod$coefficients)  # Beta coefficients for all features
-    
-    if (!is_single) {
-      # Apply TMS function row-wise efficiently
-      ordinaldf$TMS <- apply(ordinaldf[, 1:dimension], 1, function(row) TMS(alphas, betas, row))
-      ordinaldf_test$TMS <- apply(ordinaldf_test[, 1:dimension], 1, function(row) TMS(alphas, betas, row))
-    }
-  }
+  # =========
+  # # Flag to check if the model has converged
+  # converged_loocv <- FALSE
+  # 
+  # # First trial without start option
+  # tryCatch({
+  #   # Attempt to fit the model without specifying start
+  #   mod_loocv <- polr(formula, data = ordinaldf_loocv, Hess = TRUE)
+  #   converged_loocv <- TRUE
+  # }, error_loocv = function(e) {
+  #   write(sprintf("First trial without 'start' failed for LOOCV. Retrying..."),logfile)
+  # })
+  # 
+  # # If the first trial fails, attempt to fit with random starting values
+  # attempts_loocv <- as.integer(0)
+  # if (!converged_loocv) {
+  #   for (attemp_idx in 1:max_attempts) {
+  #     # Generate random starting values
+  #     start_values <- rnorm(dimension + 2, mean = 0.0, sd = 100.0)
+  #     
+  #     # Attempt to fit the model with random starting values
+  #     tryCatch({
+  #       mod_loocv <- polr(formula, data = ordinaldf_loocv, start = start_values, Hess = TRUE)
+  #       converged_loocv <- TRUE
+  #       break
+  #     }, error_loocv = function(e) {
+  #       attempts_loocv <- attempts_loocv + 1
+  #     })
+  #   }
+  # }
+  # 
+  # # If all attempts fail, print a message
+  # if (!converged_loocv) {
+  #   write(sprintf("Could not fit the loocv model after %d attempts",max_attempts),logfile)
+  #   
+  # } else {
+  #   # Make predictions for training dataset
+  #   predicted_labels_loocv <- predict(mod_loocv, newdata = ordinaldf_loocv, type = "class")
+  #   
+  #   # Variables from Ordinal Logistic Regression model
+  #   alphas_loocv <- as.numeric(mod_loocv$zeta)  # Alpha values
+  #   betas_loocv <- as.numeric(mod_loocv$coefficients)  # Beta coefficients for all features
+  #   
+  #   if (!is_single) {
+  #     # Apply TMS function row-wise efficiently
+  #     ordinaldf$TMS <- apply(ordinaldf[, 1:dimension], 1, function(row) TMS(alphas, betas, row))
+  #     ordinaldf_test$TMS <- apply(ordinaldf_test[, 1:dimension], 1, function(row) TMS(alphas, betas, row))    
+  #   }
+  # }
 
   if (dimension == 2) {
     scatterplotfun(data = ordinaldf,
@@ -499,9 +470,17 @@ pairwisefun<- function(fulltable){
 aucrocfun <- function(data, mod, label_values){
   auc_scores <- c()
   for (class_label in label_values) {
-    actual <- as.integer(data$label == class_label)
+    if (class_label == 1) {
+      actual <- as.integer(data$label != class_label)
+    } else {
+      actual <- as.integer(data$label == class_label)
+    }
     predicted_prob <- predict(mod, newdata = data, type = "probs")
-    predicted_prob <- predicted_prob[, class_label]
+    if (class_label == 1) {
+      predicted_prob <- predicted_prob[, 2] + predicted_prob[, 3]
+    } else {
+      predicted_prob <- predicted_prob[, class_label]
+    }
     roc_obj <- roc(actual,
                    predicted_prob,
                    direction = "<",
@@ -520,10 +499,10 @@ pmeasuresfun <- function(training_data, test_data, mod, label_values, tms_name =
   confusion_matrix <- table(predicted_labels_test, test_data$label)
   
   # Calculate the accuracy for each class
-  tp_class_1 = confusion_matrix[1,1]
-  tn_class_1 = confusion_matrix[2,2] + confusion_matrix[2,3] + confusion_matrix[3,2] + confusion_matrix[3,3]
-  fp_class_1 = confusion_matrix[1,2] + confusion_matrix[1,3]
-  fn_class_1 = confusion_matrix[2,1] + confusion_matrix[3,1]
+  tn_class_1 = confusion_matrix[1,1]
+  tp_class_1 = confusion_matrix[2,2] + confusion_matrix[2,3] + confusion_matrix[3,2] + confusion_matrix[3,3]
+  fn_class_1 = confusion_matrix[1,2] + confusion_matrix[1,3]
+  fp_class_1 = confusion_matrix[2,1] + confusion_matrix[3,1]
   
   tp_class_2 = confusion_matrix[2,2]
   tn_class_2 = confusion_matrix[1,2] + confusion_matrix[1,3] + confusion_matrix[3,1] + confusion_matrix[3,3]
@@ -1106,4 +1085,62 @@ rankscorefun <- function(pmeasures,
   rank_score <- model_df$Performance_level_weight %*% pm_df$Weight
   
   return(as.numeric(rank_score))
+}
+
+fitandgetTMS <- function(training_data,testing_data,formula,dimension,is_single,max_attempts,logfile){
+  converged <- FALSE
+  
+  # First trial without start option
+  tryCatch({
+    # Attempt to fit the model without specifying start
+    mod <- polr(formula, data = training_data, Hess = TRUE)
+    converged <- TRUE
+  }, error = function(e) {
+    write(sprintf("First trial without 'start' failed. Retrying..."),logfile)
+  })
+  
+  # If the first trial fails, attempt to fit with random starting values
+  attempts <- as.integer(0)
+  if (!converged) {
+    for (attemp_idx in 1:max_attempts) {
+      # Generate random starting values
+      start_values <- rnorm(dimension + 2, mean = 0.0, sd = 100.0)
+      
+      # Attempt to fit the model with random starting values
+      tryCatch({
+        mod <- polr(formula, data = training_data, start = start_values, Hess = TRUE)
+        converged <- TRUE
+        break
+      }, error = function(e) {
+        attempts <- attempts + 1
+      })
+    }
   }
+  
+  # If all attempts fail, print a message
+  if (!converged) {
+    write(sprintf("Could not fit the model after %d attempts",max_attempts),logfile)
+    
+  } else {
+    # Make predictions for training dataset
+    predicted_labels <- predict(mod, newdata = training_data, type = "class")
+    
+    # Variables from Ordinal Logistic Regression model
+    alphas <- as.numeric(mod$zeta)  # Alpha values
+    betas <- as.numeric(mod$coefficients)  # Beta coefficients for all features
+    
+    if (!is_single) {
+      # Apply TMS function row-wise efficiently
+      training_data$TMS <- apply(training_data[, 1:dimension], 1, function(row) TMS(alphas, betas, row))
+      testing_data$TMS <- apply(testing_data[, 1:dimension], 1, function(row) TMS(alphas, betas, row))
+    }
+  }
+  return(
+    list(
+      training_data = training_data,
+      testing_data = testing_data,
+      mod = mod,
+      converged = converged
+    )
+  )
+}
