@@ -36,10 +36,10 @@ filepath_training <- "data/manual_training.csv"
 filepath_testing <- "data/manual_testing.csv"
 
 # Set the number of tests
-num_tests <- 10000
+num_tests <- 1
 
 # Set feature dimension
-dimension <- 1
+dimension <- 2
 
 # Create pairsdf with all unique combinations
 pairsdf <- pairsdfinitfun(features = features, units = units, dimension = dimension)

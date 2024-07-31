@@ -74,11 +74,6 @@ run_all <- function(results_folder = 'results',
   ordinaldf <- na.omit(ordinaldf)
   ordinaldf_test <- na.omit(ordinaldf_test)
   
-  # =========
-  # For LOOCV
-  # =========
-  # ordinaldf_loocv <- rbind(ordinaldf,ordinaldf_test)
-  
   # Normalize the data
   dimension <- length(features_vector)
   if (is_normalized) {
@@ -91,15 +86,6 @@ run_all <- function(results_folder = 'results',
     tempdf <- ordinaldf_test
     tempdf[1:dimension] <- mapply(function(x, mean, sd) (x - mean) / sd, ordinaldf_test[1:dimension], means, sds)
     ordinaldf_test <- tempdf
-    
-    # =========
-    # For LOOCV
-    # =========
-    # means <- sapply(ordinaldf_loocv[1:dimension], mean)
-    # sds <- sapply(ordinaldf_loocv[1:dimension], sd)
-    # tempdf <- ordinaldf_loocv
-    # tempdf[1:dimension] <- mapply(function(x, mean, sd) (x - mean) / sd, ordinaldf_loocv[1:dimension], means, sds)
-    # ordinaldf_loocv <- tempdf
   }
   
   # Fit the ordinal logistic regression model
@@ -124,58 +110,6 @@ run_all <- function(results_folder = 'results',
   betas <- as.numeric(mod$coefficients)  # Beta coefficients for all features
   converged <- fit_results$converged
   
-  # =========
-  # For LOOCV
-  # =========
-  # # Flag to check if the model has converged
-  # converged_loocv <- FALSE
-  # 
-  # # First trial without start option
-  # tryCatch({
-  #   # Attempt to fit the model without specifying start
-  #   mod_loocv <- polr(formula, data = ordinaldf_loocv, Hess = TRUE)
-  #   converged_loocv <- TRUE
-  # }, error_loocv = function(e) {
-  #   write(sprintf("First trial without 'start' failed for LOOCV. Retrying..."),logfile)
-  # })
-  # 
-  # # If the first trial fails, attempt to fit with random starting values
-  # attempts_loocv <- as.integer(0)
-  # if (!converged_loocv) {
-  #   for (attemp_idx in 1:max_attempts) {
-  #     # Generate random starting values
-  #     start_values <- rnorm(dimension + 2, mean = 0.0, sd = 100.0)
-  #     
-  #     # Attempt to fit the model with random starting values
-  #     tryCatch({
-  #       mod_loocv <- polr(formula, data = ordinaldf_loocv, start = start_values, Hess = TRUE)
-  #       converged_loocv <- TRUE
-  #       break
-  #     }, error_loocv = function(e) {
-  #       attempts_loocv <- attempts_loocv + 1
-  #     })
-  #   }
-  # }
-  # 
-  # # If all attempts fail, print a message
-  # if (!converged_loocv) {
-  #   write(sprintf("Could not fit the loocv model after %d attempts",max_attempts),logfile)
-  #   
-  # } else {
-  #   # Make predictions for training dataset
-  #   predicted_labels_loocv <- predict(mod_loocv, newdata = ordinaldf_loocv, type = "class")
-  #   
-  #   # Variables from Ordinal Logistic Regression model
-  #   alphas_loocv <- as.numeric(mod_loocv$zeta)  # Alpha values
-  #   betas_loocv <- as.numeric(mod_loocv$coefficients)  # Beta coefficients for all features
-  #   
-  #   if (!is_single) {
-  #     # Apply TMS function row-wise efficiently
-  #     ordinaldf$TMS <- apply(ordinaldf[, 1:dimension], 1, function(row) TMS(alphas, betas, row))
-  #     ordinaldf_test$TMS <- apply(ordinaldf_test[, 1:dimension], 1, function(row) TMS(alphas, betas, row))    
-  #   }
-  # }
-
   if (dimension == 2) {
     scatterplotfun(data = ordinaldf,
                    mod = mod,
@@ -409,27 +343,20 @@ run_all <- function(results_folder = 'results',
 
   summarydf <- data.frame(
     Feature_Pair = feature_pair_name,
-    Accuracy_Class_1 = quantile(pmeasures$Accuracy_Class_1, 0.025),
-    Accuracy_Class_2 = quantile(pmeasures$Accuracy_Class_2, 0.025),
-    Accuracy_Class_3 = quantile(pmeasures$Accuracy_Class_3, 0.025),
-    AUC_Class_1 = quantile(pmeasures$AUC_Class_1, 0.025),
-    AUC_Class_2 = quantile(pmeasures$AUC_Class_2, 0.025),
-    AUC_Class_3 = quantile(pmeasures$AUC_Class_3, 0.025),
-    Sensitivity_class_1 = quantile(pmeasures$Sensitivity_class_1, 0.025),
-    Sensitivity_class_2 = quantile(pmeasures$Sensitivity_class_2, 0.025),
-    Sensitivity_class_3 = quantile(pmeasures$Sensitivity_class_3, 0.025),
-    Specificity_class_1 = quantile(pmeasures$Specificity_class_1, 0.025),
-    Specificity_class_2 = quantile(pmeasures$Specificity_class_2, 0.025),
-    Specificity_class_3 = quantile(pmeasures$Specificity_class_3, 0.025),
-    LR_positive_class_1 = quantile(pmeasures$LR_positive_class_1, 0.025),
-    LR_positive_class_2 = quantile(pmeasures$LR_positive_class_2, 0.025),
-    LR_positive_class_3 = quantile(pmeasures$LR_positive_class_3, 0.025),
-    LR_negative_class_1 = quantile(pmeasures$LR_negative_class_1, 0.975),
-    LR_negative_class_2 = quantile(pmeasures$LR_negative_class_2, 0.975),
-    LR_negative_class_3 = quantile(pmeasures$LR_negative_class_3, 0.975),
-    F1score_class_1 = quantile(pmeasures$F1score_class_1, 0.025),
-    F1score_class_2 = quantile(pmeasures$F1score_class_2, 0.025),
-    F1score_class_3 = quantile(pmeasures$F1score_class_3, 0.025),
+    Accuracy_cipa_1 = quantile(pmeasures$Accuracy_cipa_1, 0.025),
+    Accuracy_cipa_2 = quantile(pmeasures$Accuracy_cipa_2, 0.025),
+    AUC_cipa_1 = quantile(pmeasures$AUC_cipa_1, 0.025),
+    AUC_cipa_2 = quantile(pmeasures$AUC_cipa_2, 0.025),
+    Sensitivity_cipa_1 = quantile(pmeasures$Sensitivity_cipa_1, 0.025),
+    Sensitivity_cipa_2 = quantile(pmeasures$Sensitivity_cipa_2, 0.025),
+    Specificity_cipa_1 = quantile(pmeasures$Specificity_cipa_1, 0.025),
+    Specificity_cipa_2 = quantile(pmeasures$Specificity_cipa_2, 0.025),
+    LR_positive_cipa_1 = quantile(pmeasures$LR_positive_cipa_1, 0.025),
+    LR_positive_cipa_2 = quantile(pmeasures$LR_positive_cipa_2, 0.025),
+    LR_negative_cipa_1 = quantile(pmeasures$LR_negative_cipa_1, 0.975),
+    LR_negative_cipa_2 = quantile(pmeasures$LR_negative_cipa_2, 0.975),
+    F1score_cipa_1 = quantile(pmeasures$F1score_cipa_1, 0.025),
+    F1score_cipa_2 = quantile(pmeasures$F1score_cipa_2, 0.025),
     Classification_error = mean(pred_err_testing) + 1.96 * sd(pred_err_testing) / sqrt(length(pred_err_testing)),
     Pairwise_classification_accuracy = quantile(pmeasures$Pairwise, 0.025),
     Rank_score = rank_score
@@ -445,6 +372,355 @@ run_all <- function(results_folder = 'results',
     summarydf[[paste0("Beta_", i)]] <- betas[i]
   }
   
+  return(summarydf)
+}
+
+run_all_training <- function(results_folder = 'results',
+                    training = 'trainingdf',
+                    testing = 'testingdf',
+                    features_vector = 'features',
+                    units_vector = 'units',
+                    num_tests = 10000,
+                    is_normalized = FALSE){
+  # Determine if the analysis involves a single feature or multiple features
+  is_single <- length(features) == 1
+  
+  # Construct a log file name based on the number of features
+  log_filename <- if (!is_single) {
+    paste(features_vector, collapse="-")
+  } else {
+    features_vector
+  }
+  logfile <- file(paste(results_folder,"/",paste(log_filename, "log.txt", sep="_"), sep = ""), open="wt")
+  
+  # Dynamically select columns for the analysis based on features
+  # Include common columns like "label", "drug_name", "Sample_ID"
+  common_cols <- c("label", "drug_name", "Sample_ID")
+  training_cols <- as.character(c(features_vector, common_cols))
+  testing_cols <- as.character(c(features_vector, common_cols))
+  
+  # Subset training and testing dataframes based on selected columns
+  training <- training[, training_cols]
+  testing <- testing[, testing_cols]
+  
+  # Construct dataset for training and testing
+  levels <- c("low", "intermediate", "high")
+  values <- c(1, 2, 3)
+  training$label <- as.integer(factor(training$label, levels = levels, labels = values))
+  testing$label <- as.integer(factor(testing$label, levels = levels, labels = values))
+  training$label <- as.factor(training$label)
+  testing$label <- as.factor(testing$label)
+  
+  # Remove errors
+  training <- na.omit(training)
+  testing <- na.omit(testing)
+  
+  # Combine all data
+  all_data <- rbind(training,testing)
+  
+  # Normalize the data
+  dimension <- length(features_vector)
+  if (is_normalized) {
+    # Calculate mean and SD for the first 'dimension' columns of all_data
+    means <- sapply(all_data[1:dimension], mean)
+    sds <- sapply(all_data[1:dimension], sd)
+    tempdf <- all_data
+    tempdf[1:dimension] <- mapply(function(x, mean, sd) (x - mean) / sd, all_data[1:dimension], means, sds)
+    all_data <- tempdf
+  }
+  
+  # ================================
+  # Training performance on all data
+  # ================================
+  # Fit the ordinal logistic regression model
+  # Prepare the formula for logistic regression based on the number of features
+  formula_string <- paste("label ~", paste(features_vector[1:dimension], collapse = " + "))
+  formula <- as.formula(formula_string)
+  
+  # Specify the number of attempts
+  max_attempts <- 10000
+  
+  fit_results <- fitandgetTMS(training_data = all_data,
+                              testing_data = all_data,
+                              formula = formula,
+                              dimension = dimension,
+                              is_single = is_single,
+                              max_attempts = max_attempts,
+                              logfile = logfile)
+  all_data <- fit_results$training_data
+  mod <- fit_results$mod
+  alphas <- as.numeric(mod$zeta)  # Alpha values
+  betas <- as.numeric(mod$coefficients)  # Beta coefficients for all features
+  converged <- fit_results$converged
+  all_or_loocv <- TRUE
+  if (dimension == 2) {
+    scatterplotfun(data = all_data,
+                   mod = mod,
+                   feature_1 = as.character(features_vector[1]),
+                   feature_2 = as.character(features_vector[2]),
+                   unit_1 = as.character(units_vector[1]),
+                   unit_2 = as.character(units_vector[2]),
+                   is_converged = converged,
+                   is_training = TRUE,
+                   is_legend = FALSE,
+                   results_folder = results_folder,
+                   is_normalized = is_normalized)
+  }
+  # Constants of the TMS
+  if (converged) {
+    # if (!is_single) {
+    th1 <- -(alphas[1] - alphas[2] ) / 2.0 - log(1.0 - 2.0 * exp(alphas[1] - alphas[2]))
+    th2 <- -th1
+    
+    # Plot TMS for training dataset
+    label_colors <- c("low" = "green", "intermediate" = "blue", "high" = "red")
+    all_data$risk <- ifelse(all_data$label == 1, "low",
+                             ifelse(all_data$label == 2, "intermediate", "high"))
+    
+    # if (!is_single) {
+    tms_name <- "TMS"
+    filename_training <- paste(results_folder,"/",paste(log_filename, "dataset_tms.jpg", sep="_"), sep = "")
+    
+    # Plot TMS for training dataset
+    tmsplotfun(data = all_data,
+               th1 = th1,
+               th2 = th2,
+               label_colors = label_colors,
+               title = "Training all dataset",
+               file_name = filename_training,
+               tms_name = "TMS")
+  } else {
+    return(NA)
+  }
+  
+  # Preallocate the pmeasures dataframe
+  pmeasures <- data.frame()
+  
+  # Calculate the classification error from the whole training dataset
+  predicted_labels <- predict(mod, newdata = all_data, type = "class")
+  pred_err <- (abs(as.integer(predicted_labels) - as.integer(all_data$label)))
+  
+  # Calculate the pmeasures for the whole dataset
+  training_drugs <- unique(training$drug_name)
+  testing_drugs <- unique(testing$drug_name)
+  training <- subset(all_data, all_data$drug_name %in% training_drugs)
+  testing <- subset(all_data, all_data$drug_name %in% testing_drugs)
+  training$is_training <- 1
+  testing$is_training <- 0
+  for (sample_id in training$Sample_ID[training$drug_name == training_drugs[1]]) {
+    temp_training <- subset(training, training$Sample_ID == sample_id)
+    temp_testing <- subset(testing, testing$Sample_ID == sample_id)
+    temppmeasure <- pmeasuresfun(training_data = temp_training,
+                                 test_data = temp_testing,
+                                 mod = mod,
+                                 label_values = values,
+                                 tms_name = tms_name,
+                                 is_whole = FALSE)
+    pmeasures <- rbind(pmeasures,temppmeasure)
+  }
+
+  writepmeasuresfun(pmeasures = pmeasures,
+                    pmeasures_training_data = NULL,
+                    pmeasures_testing_data = NULL,
+                    pred_error_training = pred_err,
+                    pred_error_testing = NULL,
+                    logfile = logfile,
+                    is_single = is_single,
+                    all_or_loocv = all_or_loocv,
+                    th1 = th1,
+                    th2 = th2)
+  
+  # Close the connection to the text file
+  close(logfile)
+  
+  # Rank score for the OLR model
+  rank_score <- rankscorefun(pmeasures = pmeasures,
+                             pred_error = pred_err,
+                             is_normalized = TRUE)
+  
+  # Store summary of pmeasures to summarydf
+  feature_pair_name <- log_filename
+  
+  summarydf <- data.frame(
+    Feature_Pair = feature_pair_name,
+    Accuracy_cipa_1 = quantile(pmeasures$Accuracy_cipa_1, 0.025),
+    Accuracy_cipa_2 = quantile(pmeasures$Accuracy_cipa_2, 0.025),
+    AUC_cipa_1 = quantile(pmeasures$AUC_cipa_1, 0.025),
+    AUC_cipa_2 = quantile(pmeasures$AUC_cipa_2, 0.025),
+    Sensitivity_cipa_1 = quantile(pmeasures$Sensitivity_cipa_1, 0.025),
+    Sensitivity_cipa_2 = quantile(pmeasures$Sensitivity_cipa_2, 0.025),
+    Specificity_cipa_1 = quantile(pmeasures$Specificity_cipa_1, 0.025),
+    Specificity_cipa_2 = quantile(pmeasures$Specificity_cipa_2, 0.025),
+    LR_positive_cipa_1 = quantile(pmeasures$LR_positive_cipa_1, 0.025),
+    LR_positive_cipa_2 = quantile(pmeasures$LR_positive_cipa_2, 0.025),
+    LR_negative_cipa_1 = quantile(pmeasures$LR_negative_cipa_1, 0.975),
+    LR_negative_cipa_2 = quantile(pmeasures$LR_negative_cipa_2, 0.975),
+    F1score_cipa_1 = quantile(pmeasures$F1score_cipa_1, 0.025),
+    F1score_cipa_2 = quantile(pmeasures$F1score_cipa_2, 0.025),
+    Classification_error = mean(pred_err) + 1.96 * sd(pred_err) / sqrt(length(pred_err)),
+    Pairwise_classification_accuracy = quantile(pmeasures$Pairwise, 0.025),
+    Rank_score = rank_score
+  )
+  
+  # Add Alphas
+  for (i in 1:length(alphas)) {
+    summarydf[[paste0("Alpha_", i)]] <- alphas[i]
+  }
+  
+  # Add Betas
+  for (i in 1:length(betas)) {
+    summarydf[[paste0("Beta_", i)]] <- betas[i]
+  }
+  
+  return(summarydf)
+}
+
+run_all_loocv <- function(results_folder = 'results',
+                          training = 'trainingdf',
+                          testing = 'testingdf',
+                          features_vector = 'features',
+                          units_vector = 'units',
+                          num_tests = 10000,
+                          is_normalized = FALSE) {
+  # Determine if the analysis involves a single feature or multiple features
+  is_single <- length(features) == 1
+  
+  # Construct a log file name based on the number of features
+  log_filename <- if (!is_single) {
+    paste(features_vector, collapse="-")
+  } else {
+    features_vector
+  }
+  logfile <- file(paste(results_folder,"/",paste(log_filename, "log.txt", sep="_"), sep = ""), open="wt")
+  
+  # Dynamically select columns for the analysis based on features
+  # Include common columns like "label", "drug_name", "Sample_ID"
+  common_cols <- c("label", "drug_name", "Sample_ID")
+  training_cols <- as.character(c(features_vector, common_cols))
+  testing_cols <- as.character(c(features_vector, common_cols))
+  
+  # Subset training and testing dataframes based on selected columns
+  training <- training[, training_cols]
+  testing <- testing[, testing_cols]
+  
+  # Construct dataset for training and testing
+  levels <- c("low", "intermediate", "high")
+  values <- c(1, 2, 3)
+  training$label <- as.integer(factor(training$label, levels = levels, labels = values))
+  testing$label <- as.integer(factor(testing$label, levels = levels, labels = values))
+  training$label <- as.factor(training$label)
+  testing$label <- as.factor(testing$label)
+  
+  # Remove errors
+  training <- na.omit(training)
+  testing <- na.omit(testing)
+  
+  # Combine all data
+  all_data <- rbind(training,testing)
+  
+  # Normalize the data
+  dimension <- length(features_vector)
+  if (is_normalized) {
+    # Calculate mean and SD for the first 'dimension' columns of all_data
+    means <- sapply(all_data[1:dimension], mean)
+    sds <- sapply(all_data[1:dimension], sd)
+    tempdf <- all_data
+    tempdf[1:dimension] <- mapply(function(x, mean, sd) (x - mean) / sd, all_data[1:dimension], means, sds)
+    all_data <- tempdf
+  }
+  
+  # ================================
+  # LOOCV performance on all data
+  # ================================
+  # All drugs
+  drugs <- unique(all_data$drug_name)
+  
+  # Fit the ordinal logistic regression model
+  # Prepare the formula for logistic regression based on the number of features
+  formula_string <- paste("label ~", paste(features_vector[1:dimension], collapse = " + "))
+  formula <- as.formula(formula_string)
+  
+  # Specify the number of attempts
+  max_attempts <- 10000
+  
+  # Preallocated loocv data
+  loocv_data <- data.frame()
+  for (drug in drugs) {
+    fit_results <- fitandgetTMS(training_data = subset(all_data,all_data$drug_name != drug),
+                                testing_data = subset(all_data,all_data$drug_name == drug),
+                                formula = formula,
+                                dimension = dimension,
+                                is_single = is_single,
+                                max_attempts = max_attempts,
+                                logfile = logfile)
+    testing_data <- fit_results$testing_data
+    mod <- fit_results$mod
+    testing_data <- cbind(testing_data,predict(mod, newdata = testing_data, type = "probs"))
+    testing_data["pred"] <- predict(mod, newdata = testing_data, type = "class")
+    loocv_data <- rbind(loocv_data,testing_data)
+  }
+  
+  # Preallocate the pmeasures dataframe
+  pmeasures <- data.frame()
+  
+  # Calculate the classification error from the whole loocv data
+  pred_err <- (abs(as.integer(loocv_data$pred) - as.integer(loocv_data$label)))
+  
+  # Calculate the pmeasures for the whole dataset
+  training_drugs <- unique(training$drug_name)
+  testing_drugs <- unique(testing$drug_name)
+  loocv_data$is_training <- ifelse(loocv_data$drug_name %in% training_drugs, 1, 0)
+  
+  for (sample_id in training$Sample_ID[training$drug_name == training_drugs[1]]) {
+    temp_data <- subset(loocv_data, loocv_data$Sample_ID == sample_id)
+    temppmeasure <- pmeasuresfun_loocv(data = temp_data,
+                                       label_values = values,
+                                       is_whole = FALSE)
+    pmeasures <- rbind(pmeasures,temppmeasure)
+  }
+  all_or_loocv <- TRUE
+  writepmeasuresfun(pmeasures = pmeasures,
+                    pmeasures_training_data = NULL,
+                    pmeasures_testing_data = NULL,
+                    pred_error_training = pred_err,
+                    pred_error_testing = NULL,
+                    logfile = logfile,
+                    is_single = is_single,
+                    all_or_loocv = all_or_loocv,
+                    th1 = NA,
+                    th2 = NA)
+  
+  # Close the connection to the text file
+  close(logfile)
+  
+  # Rank score for the OLR model
+  rank_score <- rankscorefun(pmeasures = pmeasures,
+                             pred_error = pred_err,
+                             is_normalized = TRUE)
+  
+  # Store summary of pmeasures to summarydf
+  feature_pair_name <- log_filename
+  
+  summarydf <- data.frame(
+    Feature_Pair = feature_pair_name,
+    Accuracy_cipa_1 = quantile(pmeasures$Accuracy_cipa_1, 0.025),
+    Accuracy_cipa_2 = quantile(pmeasures$Accuracy_cipa_2, 0.025),
+    AUC_cipa_1 = quantile(pmeasures$AUC_cipa_1, 0.025),
+    AUC_cipa_2 = quantile(pmeasures$AUC_cipa_2, 0.025),
+    Sensitivity_cipa_1 = quantile(pmeasures$Sensitivity_cipa_1, 0.025),
+    Sensitivity_cipa_2 = quantile(pmeasures$Sensitivity_cipa_2, 0.025),
+    Specificity_cipa_1 = quantile(pmeasures$Specificity_cipa_1, 0.025),
+    Specificity_cipa_2 = quantile(pmeasures$Specificity_cipa_2, 0.025),
+    LR_positive_cipa_1 = quantile(pmeasures$LR_positive_cipa_1, 0.025),
+    LR_positive_cipa_2 = quantile(pmeasures$LR_positive_cipa_2, 0.025),
+    LR_negative_cipa_1 = quantile(pmeasures$LR_negative_cipa_1, 0.975),
+    LR_negative_cipa_2 = quantile(pmeasures$LR_negative_cipa_2, 0.975),
+    F1score_cipa_1 = quantile(pmeasures$F1score_cipa_1, 0.025),
+    F1score_cipa_2 = quantile(pmeasures$F1score_cipa_2, 0.025),
+    Classification_error = mean(pred_err) + 1.96 * sd(pred_err) / sqrt(length(pred_err)),
+    Pairwise_classification_accuracy = quantile(pmeasures$Pairwise, 0.025),
+    Rank_score = rank_score
+  )
   return(summarydf)
 }
 
@@ -491,6 +767,30 @@ aucrocfun <- function(data, mod, label_values){
   return(auc_scores)
 }
 
+aucrocfun_loocv <- function(data, label_values){
+  auc_scores <- c()
+  for (class_label in label_values) {
+    if (class_label == 1) {
+      actual <- as.integer(data$label != class_label)
+    } else {
+      actual <- as.integer(data$label == class_label)
+    }
+    predicted_prob <- data[c("1","2","3")]
+    if (class_label == 1) {
+      predicted_prob <- predicted_prob[, 2] + predicted_prob[, 3]
+    } else {
+      predicted_prob <- predicted_prob[, class_label]
+    }
+    roc_obj <- roc(actual,
+                   predicted_prob,
+                   direction = "<",
+                   quiet = TRUE)
+    auc_score <- auc(roc_obj)
+    auc_scores <- c(auc_scores, auc_score)
+  }
+  return(auc_scores)
+}
+
 pmeasuresfun <- function(training_data, test_data, mod, label_values, tms_name = "TMS", is_whole){
   # Calculate the accuracy and AUC for each class
   predicted_labels_test <- predict(mod, newdata = test_data, type = "class")
@@ -499,48 +799,37 @@ pmeasuresfun <- function(training_data, test_data, mod, label_values, tms_name =
   confusion_matrix <- table(predicted_labels_test, test_data$label)
   
   # Calculate the accuracy for each class
-  tn_class_1 = confusion_matrix[1,1]
-  tp_class_1 = confusion_matrix[2,2] + confusion_matrix[2,3] + confusion_matrix[3,2] + confusion_matrix[3,3]
-  fn_class_1 = confusion_matrix[1,2] + confusion_matrix[1,3]
-  fp_class_1 = confusion_matrix[2,1] + confusion_matrix[3,1]
+  tn_cipa_1 = confusion_matrix[1,1]
+  tp_cipa_1 = confusion_matrix[2,2] + confusion_matrix[2,3] + confusion_matrix[3,2] + confusion_matrix[3,3]
+  fn_cipa_1 = confusion_matrix[1,2] + confusion_matrix[1,3]
+  fp_cipa_1 = confusion_matrix[2,1] + confusion_matrix[3,1]
+
+  tp_cipa_2 = confusion_matrix[3,3]
+  tn_cipa_2 = confusion_matrix[1,1] + confusion_matrix[1,2] + confusion_matrix[2,1] + confusion_matrix[2,2]
+  fp_cipa_2 = confusion_matrix[3,1] + confusion_matrix[3,2]
+  fn_cipa_2 = confusion_matrix[1,3] + confusion_matrix[2,3]
   
-  tp_class_2 = confusion_matrix[2,2]
-  tn_class_2 = confusion_matrix[1,2] + confusion_matrix[1,3] + confusion_matrix[3,1] + confusion_matrix[3,3]
-  fp_class_2 = confusion_matrix[2,1] + confusion_matrix[2,3]
-  fn_class_2 = confusion_matrix[1,2] + confusion_matrix[3,2]
+  f1score_cipa_1 <- 2.0 * tp_cipa_1 / (2.0 * tp_cipa_1 + fp_cipa_1 + fn_cipa_1)
+  f1score_cipa_2 <- 2.0 * tp_cipa_2 / (2.0 * tp_cipa_2 + fp_cipa_2 + fn_cipa_2)
   
-  tp_class_3 = confusion_matrix[3,3]
-  tn_class_3 = confusion_matrix[1,1] + confusion_matrix[1,2] + confusion_matrix[2,1] + confusion_matrix[2,2]
-  fp_class_3 = confusion_matrix[3,1] + confusion_matrix[3,2]
-  fn_class_3 = confusion_matrix[1,3] + confusion_matrix[2,3]
+  accuracy_cipa_1 <- (tp_cipa_1 + tn_cipa_1) / sum(confusion_matrix)
+  accuracy_cipa_2 <- (tp_cipa_2 + tn_cipa_2) / sum(confusion_matrix)
   
-  f1score_class_1 <- 2.0 * tp_class_1 / (2.0 * tp_class_1 + fp_class_1 + fn_class_1)
-  f1score_class_2 <- 2.0 * tp_class_2 / (2.0 * tp_class_2 + fp_class_2 + fn_class_2)
-  f1score_class_3 <- 2.0 * tp_class_3 / (2.0 * tp_class_3 + fp_class_3 + fn_class_3)
+  sensitivity_cipa_1 <- tp_cipa_1 / (tp_cipa_1 + fn_cipa_1)
+  sensitivity_cipa_2 <- tp_cipa_2 / (tp_cipa_2 + fn_cipa_2)
   
-  accuracy_class_1 <- (tp_class_1 + tn_class_1) / sum(confusion_matrix)
-  accuracy_class_2 <- (tp_class_2 + tn_class_2) / sum(confusion_matrix)
-  accuracy_class_3 <- (tp_class_3 + tn_class_3) / sum(confusion_matrix)
-  
-  sensitivity_class_1 <- tp_class_1 / (tp_class_1 + fn_class_1)
-  sensitivity_class_2 <- tp_class_2 / (tp_class_2 + fn_class_2)
-  sensitivity_class_3 <- tp_class_3 / (tp_class_3 + fn_class_3)
-  
-  specificity_class_1 <- tn_class_1 / (tn_class_1 + fp_class_1)
-  specificity_class_2 <- tn_class_2 / (tn_class_2 + fp_class_2)
-  specificity_class_3 <- tn_class_3 / (tn_class_3 + fp_class_3)
+  specificity_cipa_1 <- tn_cipa_1 / (tn_cipa_1 + fp_cipa_1)
+  specificity_cipa_2 <- tn_cipa_2 / (tn_cipa_2 + fp_cipa_2)
   
   # Add random number to LR+ and LR- to prevent zero devision
   u <- 1e-6
   sd <- 1e-12
   
-  lr_positive_class_1 <- (sensitivity_class_1 + rnorm(1, mean = u, sd = sd)) / (1 - specificity_class_1 + rnorm(1, mean = u, sd = sd))
-  lr_positive_class_2 <- (sensitivity_class_2 + rnorm(1, mean = u, sd = sd)) / (1 - specificity_class_2 + rnorm(1, mean = u, sd = sd))
-  lr_positive_class_3 <- (sensitivity_class_3 + rnorm(1, mean = u, sd = sd)) / (1 - specificity_class_3 + rnorm(1, mean = u, sd = sd))
+  lr_positive_cipa_1 <- (sensitivity_cipa_1 + rnorm(1, mean = u, sd = sd)) / (1 - specificity_cipa_1 + rnorm(1, mean = u, sd = sd))
+  lr_positive_cipa_2 <- (sensitivity_cipa_2 + rnorm(1, mean = u, sd = sd)) / (1 - specificity_cipa_2 + rnorm(1, mean = u, sd = sd))
   
-  lr_negative_class_1 <- (1 - sensitivity_class_1 + rnorm(1, mean = u, sd = sd)) / (specificity_class_1 + rnorm(1, mean = u, sd = sd))
-  lr_negative_class_2 <- (1 - sensitivity_class_2 + rnorm(1, mean = u, sd = sd)) / (specificity_class_2 + rnorm(1, mean = u, sd = sd))
-  lr_negative_class_3 <- (1 - sensitivity_class_3 + rnorm(1, mean = u, sd = sd)) / (specificity_class_3 + rnorm(1, mean = u, sd = sd))
+  lr_negative_cipa_1 <- (1 - sensitivity_cipa_1 + rnorm(1, mean = u, sd = sd)) / (specificity_cipa_1 + rnorm(1, mean = u, sd = sd))
+  lr_negative_cipa_2 <- (1 - sensitivity_cipa_2 + rnorm(1, mean = u, sd = sd)) / (specificity_cipa_2 + rnorm(1, mean = u, sd = sd))
   
   auc_scores <- aucrocfun(test_data, mod, label_values)
   
@@ -558,39 +847,110 @@ pmeasuresfun <- function(training_data, test_data, mod, label_values, tms_name =
   
   # Fill the pmeasures row by row
   pmeasures <- data.frame(
-    TP_class_1 = tp_class_1,
-    TP_class_2 = tp_class_2,
-    TP_class_3 = tp_class_3,
-    TN_class_1 = tn_class_1,
-    TN_class_2 = tn_class_2,
-    TN_class_3 = tn_class_3,
-    FP_class_1 = fp_class_1,
-    FP_class_2 = fp_class_2,
-    FP_class_3 = fp_class_3,
-    FN_class_1 = fn_class_1,
-    FN_class_2 = fn_class_2,
-    FN_class_3 = fn_class_3,
-    F1score_class_1 = f1score_class_1,
-    F1score_class_2 = f1score_class_2,
-    F1score_class_3 = f1score_class_3,
-    Accuracy_Class_1 = accuracy_class_1,
-    Accuracy_Class_2 = accuracy_class_2,
-    Accuracy_Class_3 = accuracy_class_3,
-    AUC_Class_1 = auc_scores[1],
-    AUC_Class_2 = auc_scores[2],
-    AUC_Class_3 = auc_scores[3],
-    Sensitivity_class_1 = sensitivity_class_1,
-    Sensitivity_class_2 = sensitivity_class_2,
-    Sensitivity_class_3 = sensitivity_class_3,
-    Specificity_class_1 = specificity_class_1,
-    Specificity_class_2 = specificity_class_2,
-    Specificity_class_3 = specificity_class_3,
-    LR_positive_class_1 = lr_positive_class_1,
-    LR_positive_class_2 = lr_positive_class_2,
-    LR_positive_class_3 = lr_positive_class_3,
-    LR_negative_class_1 = lr_negative_class_1,
-    LR_negative_class_2 = lr_negative_class_2,
-    LR_negative_class_3 = lr_negative_class_3,
+    TP_cipa_1 = tp_cipa_1,
+    TP_cipa_2 = tp_cipa_2,
+    TN_cipa_1 = tn_cipa_1,
+    TN_cipa_2 = tn_cipa_2,
+    FP_cipa_1 = fp_cipa_1,
+    FP_cipa_2 = fp_cipa_2,
+    FN_cipa_1 = fn_cipa_1,
+    FN_cipa_2 = fn_cipa_2,
+    F1score_cipa_1 = f1score_cipa_1,
+    F1score_cipa_2 = f1score_cipa_2,
+    Accuracy_cipa_1 = accuracy_cipa_1,
+    Accuracy_cipa_2 = accuracy_cipa_2,
+    AUC_cipa_1 = auc_scores[1],
+    AUC_cipa_2 = auc_scores[3],
+    Sensitivity_cipa_1 = sensitivity_cipa_1,
+    Sensitivity_cipa_2 = sensitivity_cipa_2,
+    Specificity_cipa_1 = specificity_cipa_1,
+    Specificity_cipa_2 = specificity_cipa_2,
+    LR_positive_cipa_1 = lr_positive_cipa_1,
+    LR_positive_cipa_2 = lr_positive_cipa_2,
+    LR_negative_cipa_1 = lr_negative_cipa_1,
+    LR_negative_cipa_2 = lr_negative_cipa_2,
+    Pairwise = pairwise
+  )
+  
+  return(pmeasures)
+}
+
+pmeasuresfun_loocv <- function(data, label_values, tms_name = "TMS", is_whole = FALSE){
+  # Calculate the accuracy and AUC for each class
+  # Create confusion matrix
+  confusion_matrix <- table(data$pred, data$label)
+  
+  # Calculate the accuracy for each class
+  tn_cipa_1 = confusion_matrix[1,1]
+  tp_cipa_1 = confusion_matrix[2,2] + confusion_matrix[2,3] + confusion_matrix[3,2] + confusion_matrix[3,3]
+  fn_cipa_1 = confusion_matrix[1,2] + confusion_matrix[1,3]
+  fp_cipa_1 = confusion_matrix[2,1] + confusion_matrix[3,1]
+  
+  tp_cipa_2 = confusion_matrix[3,3]
+  tn_cipa_2 = confusion_matrix[1,1] + confusion_matrix[1,2] + confusion_matrix[2,1] + confusion_matrix[2,2]
+  fp_cipa_2 = confusion_matrix[3,1] + confusion_matrix[3,2]
+  fn_cipa_2 = confusion_matrix[1,3] + confusion_matrix[2,3]
+  
+  f1score_cipa_1 <- 2.0 * tp_cipa_1 / (2.0 * tp_cipa_1 + fp_cipa_1 + fn_cipa_1)
+  f1score_cipa_2 <- 2.0 * tp_cipa_2 / (2.0 * tp_cipa_2 + fp_cipa_2 + fn_cipa_2)
+  
+  accuracy_cipa_1 <- (tp_cipa_1 + tn_cipa_1) / sum(confusion_matrix)
+  accuracy_cipa_2 <- (tp_cipa_2 + tn_cipa_2) / sum(confusion_matrix)
+  
+  sensitivity_cipa_1 <- tp_cipa_1 / (tp_cipa_1 + fn_cipa_1)
+  sensitivity_cipa_2 <- tp_cipa_2 / (tp_cipa_2 + fn_cipa_2)
+  
+  specificity_cipa_1 <- tn_cipa_1 / (tn_cipa_1 + fp_cipa_1)
+  specificity_cipa_2 <- tn_cipa_2 / (tn_cipa_2 + fp_cipa_2)
+  
+  # Add random number to LR+ and LR- to prevent zero devision
+  u <- 1e-6
+  sd <- 1e-12
+  
+  lr_positive_cipa_1 <- (sensitivity_cipa_1 + rnorm(1, mean = u, sd = sd)) / (1 - specificity_cipa_1 + rnorm(1, mean = u, sd = sd))
+  lr_positive_cipa_2 <- (sensitivity_cipa_2 + rnorm(1, mean = u, sd = sd)) / (1 - specificity_cipa_2 + rnorm(1, mean = u, sd = sd))
+  
+  lr_negative_cipa_1 <- (1 - sensitivity_cipa_1 + rnorm(1, mean = u, sd = sd)) / (specificity_cipa_1 + rnorm(1, mean = u, sd = sd))
+  lr_negative_cipa_2 <- (1 - sensitivity_cipa_2 + rnorm(1, mean = u, sd = sd)) / (specificity_cipa_2 + rnorm(1, mean = u, sd = sd))
+  
+  auc_scores <- aucrocfun_loocv(data, label_values)
+  
+  # Calculate the pairwise classification error
+  # complete_data <- rbind(test_data,training_data)
+  # complete_data["pred"] <- predict(mod, newdata = complete_data, type = "class")
+  data["risk_label"] <- as.integer(data$label)
+  data["risk_pred"] <- as.integer(data$pred)
+  data <- data[,c("Sample_ID","drug_name",tms_name,"risk_label","risk_pred","is_training")]
+  if (is_whole) {
+    pairwise <- NA
+  } else{
+    pairwise <- pairwisefun(data)
+  }
+  
+  # Fill the pmeasures row by row
+  pmeasures <- data.frame(
+    TP_cipa_1 = tp_cipa_1,
+    TP_cipa_2 = tp_cipa_2,
+    TN_cipa_1 = tn_cipa_1,
+    TN_cipa_2 = tn_cipa_2,
+    FP_cipa_1 = fp_cipa_1,
+    FP_cipa_2 = fp_cipa_2,
+    FN_cipa_1 = fn_cipa_1,
+    FN_cipa_2 = fn_cipa_2,
+    F1score_cipa_1 = f1score_cipa_1,
+    F1score_cipa_2 = f1score_cipa_2,
+    Accuracy_cipa_1 = accuracy_cipa_1,
+    Accuracy_cipa_2 = accuracy_cipa_2,
+    AUC_cipa_1 = auc_scores[1],
+    AUC_cipa_2 = auc_scores[3],
+    Sensitivity_cipa_1 = sensitivity_cipa_1,
+    Sensitivity_cipa_2 = sensitivity_cipa_2,
+    Specificity_cipa_1 = specificity_cipa_1,
+    Specificity_cipa_2 = specificity_cipa_2,
+    LR_positive_cipa_1 = lr_positive_cipa_1,
+    LR_positive_cipa_2 = lr_positive_cipa_2,
+    LR_negative_cipa_1 = lr_negative_cipa_1,
+    LR_negative_cipa_2 = lr_negative_cipa_2,
     Pairwise = pairwise
   )
   
@@ -668,6 +1028,7 @@ scatterplotfun <- function(data,
     unit_1 <- ""
     unit_2 <- ""
   }
+
   jpeg(paste(results_folder,"/",paste(feature_1,feature_2,file_name,"dataset.jpg",sep = "_"), sep = ""),quality = 100, units = "in", width = 5, height = 5, res = 900)
   plot(data[,idx_model_1], 
        data[,idx_model_2], 
@@ -743,7 +1104,7 @@ solvepair <- function(results_folder,
   testing <- read_csv(filepath_testing, show_col_types = FALSE)
 
   # Perform all
-  resultdf <- run_all(results_folder = results_folder,
+  resultdf <- run_all_loocv(results_folder = results_folder,
                       training = training,
                       testing = testing,
                       features_vector = features_vector,
@@ -760,6 +1121,7 @@ writepmeasuresfun <- function(pmeasures,
                             pred_error_testing,
                             logfile,
                             is_single = FALSE,
+                            all_or_loocv = FALSE,
                             th1 = NA,
                             th2 = NA){
   
@@ -771,189 +1133,227 @@ writepmeasuresfun <- function(pmeasures,
   write(paste(sprintf('Threshold_2: %.4f ', th2)), logfile)
 
   # Print the pmeasures dataframe into logfile
-  write("=======================",logfile)
-  write(sprintf("Performance measures for %d test",num_tests),logfile)
-  write("=======================",logfile)
-  write(sprintf('AUC of low risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$AUC_Class_1),
-                quantile(pmeasures$AUC_Class_1, 0.025),
-                quantile(pmeasures$AUC_Class_1, 0.975)),
-        logfile)
-  write(sprintf('AUC of intermediate risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$AUC_Class_2),
-                quantile(pmeasures$AUC_Class_2, 0.025),
-                quantile(pmeasures$AUC_Class_2, 0.975)),
-        logfile)
-  write(sprintf('AUC of high risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$AUC_Class_3),
-                quantile(pmeasures$AUC_Class_3, 0.025),
-                quantile(pmeasures$AUC_Class_3, 0.975)),
-        logfile)
-  write(sprintf('Accuracy of low risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$Accuracy_Class_1),
-                quantile(pmeasures$Accuracy_Class_1, 0.025),
-                quantile(pmeasures$Accuracy_Class_1, 0.975)),
-        logfile)
-  write(sprintf('Accuracy of intermediate risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$Accuracy_Class_2),
-                quantile(pmeasures$Accuracy_Class_2, 0.025),
-                quantile(pmeasures$Accuracy_Class_2, 0.975)),
-        logfile)
-  write(sprintf('Accuracy of high risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$Accuracy_Class_3),
-                quantile(pmeasures$Accuracy_Class_3, 0.025),
-                quantile(pmeasures$Accuracy_Class_3, 0.975)),
-        logfile)
-  write(sprintf('Sensitivity of low risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$Sensitivity_class_1),
-                quantile(pmeasures$Sensitivity_class_1, 0.025),
-                quantile(pmeasures$Sensitivity_class_1, 0.975)),
-        logfile)
-  write(sprintf('Sensitivity of intermediate risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$Sensitivity_class_2),
-                quantile(pmeasures$Sensitivity_class_2, 0.025),
-                quantile(pmeasures$Sensitivity_class_2, 0.975)),
-        logfile)
-  write(sprintf('Sensitivity of high risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$Sensitivity_class_3),
-                quantile(pmeasures$Sensitivity_class_3, 0.025),
-                quantile(pmeasures$Sensitivity_class_3, 0.975)),
-        logfile)
-  write(sprintf('Specificity of low risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$Specificity_class_1),
-                quantile(pmeasures$Specificity_class_1, 0.025),
-                quantile(pmeasures$Specificity_class_1, 0.975)),
-        logfile)
-  write(sprintf('Specificity of intermediate risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$Specificity_class_2),
-                quantile(pmeasures$Specificity_class_2, 0.025),
-                quantile(pmeasures$Specificity_class_2, 0.975)),
-        logfile)
-  write(sprintf('Specificity of high risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$Specificity_class_3),
-                quantile(pmeasures$Specificity_class_3, 0.025),
-                quantile(pmeasures$Specificity_class_3, 0.975)),
-        logfile)
-  write(sprintf('LR+ of low risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$LR_positive_class_1),
-                quantile(pmeasures$LR_positive_class_1, 0.025),
-                quantile(pmeasures$LR_positive_class_1, 0.975)),
-        logfile)
-  write(sprintf('LR+ of intermediate risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$LR_positive_class_2),
-                quantile(pmeasures$LR_positive_class_2, 0.025),
-                quantile(pmeasures$LR_positive_class_2, 0.975)),
-        logfile)
-  write(sprintf('LR+ of high risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$LR_positive_class_3),
-                quantile(pmeasures$LR_positive_class_3, 0.025),
-                quantile(pmeasures$LR_positive_class_3, 0.975)),
-        logfile)
-  write(sprintf('LR- of low risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$LR_negative_class_1),
-                quantile(pmeasures$LR_negative_class_1, 0.025),
-                quantile(pmeasures$LR_negative_class_1, 0.975)),
-        logfile)
-  write(sprintf('LR- of intermediate risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$LR_negative_class_2),
-                quantile(pmeasures$LR_negative_class_2, 0.025),
-                quantile(pmeasures$LR_negative_class_2, 0.975)),
-        logfile)
-  write(sprintf('LR- of high risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$LR_negative_class_3),
-                quantile(pmeasures$LR_negative_class_3, 0.025),
-                quantile(pmeasures$LR_negative_class_3, 0.975)),
-        logfile)
-  write(sprintf('F1score of low risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$F1score_class_1),
-                quantile(pmeasures$F1score_class_1, 0.025),
-                quantile(pmeasures$F1score_class_1, 0.975)),
-        logfile)
-  write(sprintf('F1score of intermediate risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$F1score_class_2),
-                quantile(pmeasures$F1score_class_2, 0.025),
-                quantile(pmeasures$F1score_class_2, 0.975)),
-        logfile)
-  write(sprintf('F1score of high risk: %.4f (%.4f, %.4f)',
-                median(pmeasures$F1score_class_3),
-                quantile(pmeasures$F1score_class_3, 0.025),
-                quantile(pmeasures$F1score_class_3, 0.975)),
-        logfile)
-  write(sprintf('Classification error: %.4f (%.4f, %.4f)',
-                mean(pred_error_testing),
-                mean(pred_error_testing) - 1.96 * sd(pred_error_testing) / sqrt(length(pred_error_testing)),
-                mean(pred_error_testing) + 1.96 * sd(pred_error_testing) / sqrt(length(pred_error_testing))),
-        logfile)
-  write(sprintf('Pairwise classification accuracy: %.4f (%.4f, %.4f)',
-                median(pmeasures$Pairwise),
-                quantile(pmeasures$Pairwise, 0.025),
-                quantile(pmeasures$Pairwise, 0.975)),
-        logfile)
+  if (!all_or_loocv) {
+    write("=======================",logfile)
+    write(sprintf("Performance measures for %d test",num_tests),logfile)
+    write("=======================",logfile)
+    write(sprintf('AUC cipa 1: %.4f (%.4f, %.4f)',
+                  median(pmeasures$AUC_cipa_1),
+                  quantile(pmeasures$AUC_cipa_1, 0.025),
+                  quantile(pmeasures$AUC_cipa_1, 0.975)),
+          logfile)
+    write(sprintf('AUC cipa 2: %.4f (%.4f, %.4f)',
+                  median(pmeasures$AUC_cipa_2),
+                  quantile(pmeasures$AUC_cipa_2, 0.025),
+                  quantile(pmeasures$AUC_cipa_2, 0.975)),
+          logfile)
+    write(sprintf('Accuracy cipa 1: %.4f (%.4f, %.4f)',
+                  median(pmeasures$Accuracy_cipa_1),
+                  quantile(pmeasures$Accuracy_cipa_1, 0.025),
+                  quantile(pmeasures$Accuracy_cipa_1, 0.975)),
+          logfile)
+    write(sprintf('Accuracy cipa 2: %.4f (%.4f, %.4f)',
+                  median(pmeasures$Accuracy_cipa_2),
+                  quantile(pmeasures$Accuracy_cipa_2, 0.025),
+                  quantile(pmeasures$Accuracy_cipa_2, 0.975)),
+          logfile)
+    write(sprintf('Sensitivity cipa 1: %.4f (%.4f, %.4f)',
+                  median(pmeasures$Sensitivity_cipa_1),
+                  quantile(pmeasures$Sensitivity_cipa_1, 0.025),
+                  quantile(pmeasures$Sensitivity_cipa_1, 0.975)),
+          logfile)
+    write(sprintf('Sensitivity cipa 2: %.4f (%.4f, %.4f)',
+                  median(pmeasures$Sensitivity_cipa_2),
+                  quantile(pmeasures$Sensitivity_cipa_2, 0.025),
+                  quantile(pmeasures$Sensitivity_cipa_2, 0.975)),
+          logfile)
+    write(sprintf('Specificity cipa 1: %.4f (%.4f, %.4f)',
+                  median(pmeasures$Specificity_cipa_1),
+                  quantile(pmeasures$Specificity_cipa_1, 0.025),
+                  quantile(pmeasures$Specificity_cipa_1, 0.975)),
+          logfile)
+    write(sprintf('Specificity cipa 2: %.4f (%.4f, %.4f)',
+                  median(pmeasures$Specificity_cipa_2),
+                  quantile(pmeasures$Specificity_cipa_2, 0.025),
+                  quantile(pmeasures$Specificity_cipa_2, 0.975)),
+          logfile)
+    write(sprintf('LR+ cipa 1: %.4f (%.4f, %.4f)',
+                  median(pmeasures$LR_positive_cipa_1),
+                  quantile(pmeasures$LR_positive_cipa_1, 0.025),
+                  quantile(pmeasures$LR_positive_cipa_1, 0.975)),
+          logfile)
+    write(sprintf('LR+ cipa 2: %.4f (%.4f, %.4f)',
+                  median(pmeasures$LR_positive_cipa_2),
+                  quantile(pmeasures$LR_positive_cipa_2, 0.025),
+                  quantile(pmeasures$LR_positive_cipa_2, 0.975)),
+          logfile)
+    write(sprintf('LR- cipa 1: %.4f (%.4f, %.4f)',
+                  median(pmeasures$LR_negative_cipa_1),
+                  quantile(pmeasures$LR_negative_cipa_1, 0.025),
+                  quantile(pmeasures$LR_negative_cipa_1, 0.975)),
+          logfile)
+    write(sprintf('LR- cipa 2: %.4f (%.4f, %.4f)',
+                  median(pmeasures$LR_negative_cipa_2),
+                  quantile(pmeasures$LR_negative_cipa_2, 0.025),
+                  quantile(pmeasures$LR_negative_cipa_2, 0.975)),
+          logfile)
+    write(sprintf('F1score cipa 1: %.4f (%.4f, %.4f)',
+                  median(pmeasures$F1score_cipa_1),
+                  quantile(pmeasures$F1score_cipa_1, 0.025),
+                  quantile(pmeasures$F1score_cipa_1, 0.975)),
+          logfile)
+    write(sprintf('F1score cipa 2: %.4f (%.4f, %.4f)',
+                  median(pmeasures$F1score_cipa_2),
+                  quantile(pmeasures$F1score_cipa_2, 0.025),
+                  quantile(pmeasures$F1score_cipa_2, 0.975)),
+          logfile)
+    write(sprintf('Classification error: %.4f (%.4f, %.4f)',
+                  mean(pred_error_testing),
+                  mean(pred_error_testing) - 1.96 * sd(pred_error_testing) / sqrt(length(pred_error_testing)),
+                  mean(pred_error_testing) + 1.96 * sd(pred_error_testing) / sqrt(length(pred_error_testing))),
+          logfile)
+    write(sprintf('Pairwise classification accuracy: %.4f (%.4f, %.4f)',
+                  median(pmeasures$Pairwise),
+                  quantile(pmeasures$Pairwise, 0.025),
+                  quantile(pmeasures$Pairwise, 0.975)),
+          logfile)
   
-  write("==============================",logfile)
-  write("Performance measures for whole training data",logfile)
-  write("==============================",logfile)
-  write(sprintf('AUC of low risk: %.4f',pmeasures_training_data$AUC_Class_1),logfile)
-  write(sprintf('AUC of intermediate risk: %.4f',pmeasures_training_data$AUC_Class_2),logfile)
-  write(sprintf('AUC of high risk: %.4f',pmeasures_training_data$AUC_Class_3),logfile)
-  write(sprintf('Accuracy of low risk: %.4f',pmeasures_training_data$Accuracy_Class_1),logfile)
-  write(sprintf('Accuracy of intermediate risk: %.4f',pmeasures_training_data$Accuracy_Class_2),logfile)
-  write(sprintf('Accuracy of high risk: %.4f',pmeasures_training_data$Accuracy_Class_3),logfile)
-  write(sprintf('Sensitivity of low risk: %.4f',pmeasures_training_data$Sensitivity_class_1),logfile)
-  write(sprintf('Sensitivity of intermediate risk: %.4f',pmeasures_training_data$Sensitivity_class_2),logfile)
-  write(sprintf('Sensitivity of high risk: %.4f',pmeasures_training_data$Sensitivity_class_3),logfile)
-  write(sprintf('Specificity of low risk: %.4f',pmeasures_training_data$Specificity_class_1),logfile)
-  write(sprintf('Specificity of intermediate risk: %.4f',pmeasures_training_data$Specificity_class_2),logfile)
-  write(sprintf('Specificity of high risk: %.4f',pmeasures_training_data$Specificity_class_3),logfile)
-  write(sprintf('LR+ of low risk: %.4f',pmeasures_training_data$LR_positive_class_1),logfile)
-  write(sprintf('LR+ of intermediate risk: %.4f',pmeasures_training_data$LR_positive_class_2),logfile)
-  write(sprintf('LR+ of high risk: %.4f',pmeasures_training_data$LR_positive_class_3),logfile)
-  write(sprintf('LR- of low risk: %.4f',pmeasures_training_data$LR_negative_class_1),logfile)
-  write(sprintf('LR- of intermediate risk: %.4f',pmeasures_training_data$LR_negative_class_2),logfile)
-  write(sprintf('LR- of high risk: %.4f',pmeasures_training_data$LR_negative_class_3),logfile)
-  write(sprintf('F1score of low risk: %.4f',pmeasures_training_data$F1score_class_1),logfile)
-  write(sprintf('F1score of intermediate risk: %.4f',pmeasures_training_data$F1score_class_2),logfile)
-  write(sprintf('F1score of high risk: %.4f',pmeasures_training_data$F1score_class_3),logfile)
-  write(sprintf('Classification error: %.4f (%.4f, %.4f)',
-                mean(pred_error_training),
-                mean(pred_error_training) - 1.96 * sd(pred_error_training) / sqrt(length(pred_error_training)),
-                mean(pred_error_training) + 1.96 * sd(pred_error_training) / sqrt(length(pred_error_training))),
-        logfile)
-  write(sprintf('Pairwise classification accuracy: %.4f',pmeasures_training_data$Pairwise),logfile)
-  
-  write("==============================",logfile)
-  write("Performance measures for whole testing data",logfile)
-  write("==============================",logfile)
-  write(sprintf('AUC of low risk: %.4f',pmeasures_testing_data$AUC_Class_1),logfile)
-  write(sprintf('AUC of intermediate risk: %.4f',pmeasures_testing_data$AUC_Class_2),logfile)
-  write(sprintf('AUC of high risk: %.4f',pmeasures_testing_data$AUC_Class_3),logfile)
-  write(sprintf('Accuracy of low risk: %.4f',pmeasures_testing_data$Accuracy_Class_1),logfile)
-  write(sprintf('Accuracy of intermediate risk: %.4f',pmeasures_testing_data$Accuracy_Class_2),logfile)
-  write(sprintf('Accuracy of high risk: %.4f',pmeasures_testing_data$Accuracy_Class_3),logfile)
-  write(sprintf('Sensitivity of low risk: %.4f',pmeasures_testing_data$Sensitivity_class_1),logfile)
-  write(sprintf('Sensitivity of intermediate risk: %.4f',pmeasures_testing_data$Sensitivity_class_2),logfile)
-  write(sprintf('Sensitivity of high risk: %.4f',pmeasures_testing_data$Sensitivity_class_3),logfile)
-  write(sprintf('Specificity of low risk: %.4f',pmeasures_testing_data$Specificity_class_1),logfile)
-  write(sprintf('Specificity of intermediate risk: %.4f',pmeasures_testing_data$Specificity_class_2),logfile)
-  write(sprintf('Specificity of high risk: %.4f',pmeasures_testing_data$Specificity_class_3),logfile)
-  write(sprintf('LR+ of low risk: %.4f',pmeasures_testing_data$LR_positive_class_1),logfile)
-  write(sprintf('LR+ of intermediate risk: %.4f',pmeasures_testing_data$LR_positive_class_2),logfile)
-  write(sprintf('LR+ of high risk: %.4f',pmeasures_testing_data$LR_positive_class_3),logfile)
-  write(sprintf('LR- of low risk: %.4f',pmeasures_testing_data$LR_negative_class_1),logfile)
-  write(sprintf('LR- of intermediate risk: %.4f',pmeasures_testing_data$LR_negative_class_2),logfile)
-  write(sprintf('LR- of high risk: %.4f',pmeasures_testing_data$LR_negative_class_3),logfile)
-  write(sprintf('F1score of low risk: %.4f',pmeasures_testing_data$F1score_class_1),logfile)
-  write(sprintf('F1score of intermediate risk: %.4f',pmeasures_testing_data$F1score_class_2),logfile)
-  write(sprintf('F1score of high risk: %.4f',pmeasures_testing_data$F1score_class_3),logfile)
-  write(sprintf('Pairwise classification accuracy: %.4f',pmeasures_testing_data$Pairwise),logfile)
+    write("==============================",logfile)
+    write("Performance measures for whole training data",logfile)
+    write("==============================",logfile)
+    write(sprintf('AUC cipa 1: %.4f',pmeasures_training_data$AUC_cipa_1),logfile)
+    write(sprintf('AUC cipa 2: %.4f',pmeasures_training_data$AUC_cipa_2),logfile)
+    write(sprintf('Accuracy cipa 1: %.4f',pmeasures_training_data$Accuracy_cipa_1),logfile)
+    write(sprintf('Accuracy cipa 2: %.4f',pmeasures_training_data$Accuracy_cipa_2),logfile)
+    write(sprintf('Sensitivity cipa 1: %.4f',pmeasures_training_data$Sensitivity_cipa_1),logfile)
+    write(sprintf('Sensitivity cipa 2: %.4f',pmeasures_training_data$Sensitivity_cipa_2),logfile)
+    write(sprintf('Specificity cipa 1: %.4f',pmeasures_training_data$Specificity_cipa_1),logfile)
+    write(sprintf('Specificity cipa 2: %.4f',pmeasures_training_data$Specificity_cipa_2),logfile)
+    write(sprintf('LR+ cipa 1: %.4f',pmeasures_training_data$LR_positive_cipa_1),logfile)
+    write(sprintf('LR+ cipa 2: %.4f',pmeasures_training_data$LR_positive_cipa_2),logfile)
+    write(sprintf('LR- cipa 1: %.4f',pmeasures_training_data$LR_negative_cipa_1),logfile)
+    write(sprintf('LR- cipa 2: %.4f',pmeasures_training_data$LR_negative_cipa_2),logfile)
+    write(sprintf('F1score cipa 1: %.4f',pmeasures_training_data$F1score_cipa_1),logfile)
+    write(sprintf('F1score cipa 2: %.4f',pmeasures_training_data$F1score_cipa_2),logfile)
+    write(sprintf('Classification error: %.4f (%.4f, %.4f)',
+                  mean(pred_error_training),
+                  mean(pred_error_training) - 1.96 * sd(pred_error_training) / sqrt(length(pred_error_training)),
+                  mean(pred_error_training) + 1.96 * sd(pred_error_training) / sqrt(length(pred_error_training))),
+          logfile)
+    write(sprintf('Pairwise classification accuracy: %.4f',pmeasures_training_data$Pairwise),logfile)
+    
+    write("==============================",logfile)
+    write("Performance measures for whole testing data",logfile)
+    write("==============================",logfile)
+    write(sprintf('AUC cipa 1: %.4f',pmeasures_testing_data$AUC_cipa_1),logfile)
+    write(sprintf('AUC cipa 2: %.4f',pmeasures_testing_data$AUC_cipa_2),logfile)
+    write(sprintf('Accuracy cipa 1: %.4f',pmeasures_testing_data$Accuracy_cipa_1),logfile)
+    write(sprintf('Accuracy cipa 2: %.4f',pmeasures_testing_data$Accuracy_cipa_2),logfile)
+    write(sprintf('Sensitivity cipa 1: %.4f',pmeasures_testing_data$Sensitivity_cipa_1),logfile)
+    write(sprintf('Sensitivity cipa 2: %.4f',pmeasures_testing_data$Sensitivity_cipa_2),logfile)
+    write(sprintf('Specificity cipa 1: %.4f',pmeasures_testing_data$Specificity_cipa_1),logfile)
+    write(sprintf('Specificity cipa 2: %.4f',pmeasures_testing_data$Specificity_cipa_2),logfile)
+    write(sprintf('LR+ cipa 1: %.4f',pmeasures_testing_data$LR_positive_cipa_1),logfile)
+    write(sprintf('LR+ cipa 2: %.4f',pmeasures_testing_data$LR_positive_cipa_2),logfile)
+    write(sprintf('LR- cipa 1: %.4f',pmeasures_testing_data$LR_negative_cipa_1),logfile)
+    write(sprintf('LR- cipa 2: %.4f',pmeasures_testing_data$LR_negative_cipa_2),logfile)
+    write(sprintf('F1score cipa 1: %.4f',pmeasures_testing_data$F1score_cipa_1),logfile)
+    write(sprintf('F1score cipa 2: %.4f',pmeasures_testing_data$F1score_cipa_2),logfile)
+    write(sprintf('Pairwise classification accuracy: %.4f',pmeasures_testing_data$Pairwise),logfile)
+  } else {
+    write("==============================",logfile)
+    write("Performance measures for whole training data",logfile)
+    write("==============================",logfile)
+    write(sprintf('AUC cipa 1: %.4f (%.4f, %.4f)',
+                  median(pmeasures$AUC_cipa_1),
+                  quantile(pmeasures$AUC_cipa_1, 0.025),
+                  quantile(pmeasures$AUC_cipa_1, 0.975)),
+          logfile)
+    write(sprintf('AUC cipa 2: %.4f (%.4f, %.4f)',
+                  median(pmeasures$AUC_cipa_2),
+                  quantile(pmeasures$AUC_cipa_2, 0.025),
+                  quantile(pmeasures$AUC_cipa_2, 0.975)),
+          logfile)
+    write(sprintf('Accuracy cipa 1: %.4f (%.4f, %.4f)',
+                  median(pmeasures$Accuracy_cipa_1),
+                  quantile(pmeasures$Accuracy_cipa_1, 0.025),
+                  quantile(pmeasures$Accuracy_cipa_1, 0.975)),
+          logfile)
+    write(sprintf('Accuracy cipa 2: %.4f (%.4f, %.4f)',
+                  median(pmeasures$Accuracy_cipa_2),
+                  quantile(pmeasures$Accuracy_cipa_2, 0.025),
+                  quantile(pmeasures$Accuracy_cipa_2, 0.975)),
+          logfile)
+    write(sprintf('Sensitivity cipa 1: %.4f (%.4f, %.4f)',
+                  median(pmeasures$Sensitivity_cipa_1),
+                  quantile(pmeasures$Sensitivity_cipa_1, 0.025),
+                  quantile(pmeasures$Sensitivity_cipa_1, 0.975)),
+          logfile)
+    write(sprintf('Sensitivity cipa 2: %.4f (%.4f, %.4f)',
+                  median(pmeasures$Sensitivity_cipa_2),
+                  quantile(pmeasures$Sensitivity_cipa_2, 0.025),
+                  quantile(pmeasures$Sensitivity_cipa_2, 0.975)),
+          logfile)
+    write(sprintf('Specificity cipa 1: %.4f (%.4f, %.4f)',
+                  median(pmeasures$Specificity_cipa_1),
+                  quantile(pmeasures$Specificity_cipa_1, 0.025),
+                  quantile(pmeasures$Specificity_cipa_1, 0.975)),
+          logfile)
+    write(sprintf('Specificity cipa 2: %.4f (%.4f, %.4f)',
+                  median(pmeasures$Specificity_cipa_2),
+                  quantile(pmeasures$Specificity_cipa_2, 0.025),
+                  quantile(pmeasures$Specificity_cipa_2, 0.975)),
+          logfile)
+    write(sprintf('LR+ cipa 1: %.4f (%.4f, %.4f)',
+                  median(pmeasures$LR_positive_cipa_1),
+                  quantile(pmeasures$LR_positive_cipa_1, 0.025),
+                  quantile(pmeasures$LR_positive_cipa_1, 0.975)),
+          logfile)
+    write(sprintf('LR+ cipa 2: %.4f (%.4f, %.4f)',
+                  median(pmeasures$LR_positive_cipa_2),
+                  quantile(pmeasures$LR_positive_cipa_2, 0.025),
+                  quantile(pmeasures$LR_positive_cipa_2, 0.975)),
+          logfile)
+    write(sprintf('LR- cipa 1: %.4f (%.4f, %.4f)',
+                  median(pmeasures$LR_negative_cipa_1),
+                  quantile(pmeasures$LR_negative_cipa_1, 0.025),
+                  quantile(pmeasures$LR_negative_cipa_1, 0.975)),
+          logfile)
+    write(sprintf('LR- cipa 2: %.4f (%.4f, %.4f)',
+                  median(pmeasures$LR_negative_cipa_2),
+                  quantile(pmeasures$LR_negative_cipa_2, 0.025),
+                  quantile(pmeasures$LR_negative_cipa_2, 0.975)),
+          logfile)
+    write(sprintf('F1score cipa 1: %.4f (%.4f, %.4f)',
+                  median(pmeasures$F1score_cipa_1),
+                  quantile(pmeasures$F1score_cipa_1, 0.025),
+                  quantile(pmeasures$F1score_cipa_1, 0.975)),
+          logfile)
+    write(sprintf('F1score cipa 2: %.4f (%.4f, %.4f)',
+                  median(pmeasures$F1score_cipa_2),
+                  quantile(pmeasures$F1score_cipa_2, 0.025),
+                  quantile(pmeasures$F1score_cipa_2, 0.975)),
+          logfile)
+    write(sprintf('Classification error: %.4f (%.4f, %.4f)',
+                  mean(pred_error_training),
+                  mean(pred_error_training) - 1.96 * sd(pred_error_training) / sqrt(length(pred_error_training)),
+                  mean(pred_error_training) + 1.96 * sd(pred_error_training) / sqrt(length(pred_error_training))),
+          logfile)
+    write(sprintf('Pairwise classification accuracy: %.4f (%.4f, %.4f)',
+                  median(pmeasures$Pairwise),
+                  quantile(pmeasures$Pairwise, 0.025),
+                  quantile(pmeasures$Pairwise, 0.975)),
+          logfile)
+    
+  }
 }
 
 rankscorefun <- function(pmeasures,
                          pred_error,
                          is_normalized = TRUE){
-  Performance_measures <- c("AUC_Class_1", "AUC_Class_3",
-                            "LR_positive_class_1", "LR_positive_class_3",
-                            "LR_negative_class_1", "LR_negative_class_3",
+  Performance_measures <- c("AUC_cipa_1", "AUC_cipa_2",
+                            "LR_positive_cipa_1", "LR_positive_cipa_2",
+                            "LR_negative_cipa_1", "LR_negative_cipa_2",
                             "Pairwise","Classification_error")
   Performance_levels <- c("Excellent_performance", 
                           "Good_performance",
@@ -985,76 +1385,76 @@ rankscorefun <- function(pmeasures,
   # Check the performance level for each performance measure 
   # by looking at the 95% confidence interval that match the CiPA's criteria
   
-  # AUC_Class_1
-  score_to_check <- quantile(pmeasures$AUC_Class_1, 0.025)
+  # AUC_cipa_1
+  score_to_check <- quantile(pmeasures$AUC_cipa_1, 0.025)
   if (score_to_check < 0.7) {
-    model_df[model_df$Performance_measure == "AUC_Class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
+    model_df[model_df$Performance_measure == "AUC_cipa_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
   } else if (score_to_check >= 0.7 & score_to_check < 0.8) {
-    model_df[model_df$Performance_measure == "AUC_Class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Minimally_acceptable_performance",]$Weight
+    model_df[model_df$Performance_measure == "AUC_cipa_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Minimally_acceptable_performance",]$Weight
   } else if (score_to_check >= 0.8 & score_to_check < 0.9) {
-    model_df[model_df$Performance_measure == "AUC_Class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Good_performance",]$Weight
+    model_df[model_df$Performance_measure == "AUC_cipa_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Good_performance",]$Weight
   } else {
-    model_df[model_df$Performance_measure == "AUC_Class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Excellent_performance",]$Weight
+    model_df[model_df$Performance_measure == "AUC_cipa_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Excellent_performance",]$Weight
   }
   
-  # AUC_Class_3
-  score_to_check <- quantile(pmeasures$AUC_Class_3, 0.025)
+  # AUC_cipa_2
+  score_to_check <- quantile(pmeasures$AUC_cipa_2, 0.025)
   if (score_to_check < 0.7) {
-    model_df[model_df$Performance_measure == "AUC_Class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
+    model_df[model_df$Performance_measure == "AUC_cipa_2",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
   } else if (score_to_check >= 0.7 & score_to_check < 0.8) {
-    model_df[model_df$Performance_measure == "AUC_Class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Minimally_acceptable_performance",]$Weight
+    model_df[model_df$Performance_measure == "AUC_cipa_2",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Minimally_acceptable_performance",]$Weight
   } else if (score_to_check >= 0.8 & score_to_check < 0.9) {
-    model_df[model_df$Performance_measure == "AUC_Class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Good_performance",]$Weight
+    model_df[model_df$Performance_measure == "AUC_cipa_2",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Good_performance",]$Weight
   } else {
-    model_df[model_df$Performance_measure == "AUC_Class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Excellent_performance",]$Weight
+    model_df[model_df$Performance_measure == "AUC_cipa_2",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Excellent_performance",]$Weight
   }
   
-  # LR_positive_class_1
-  score_to_check <- quantile(pmeasures$LR_positive_class_1, 0.025)
+  # LR_positive_cipa_1
+  score_to_check <- quantile(pmeasures$LR_positive_cipa_1, 0.025)
   if (score_to_check < 2.0) {
-    model_df[model_df$Performance_measure == "LR_positive_class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
+    model_df[model_df$Performance_measure == "LR_positive_cipa_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
   } else if (score_to_check >= 2.0 & score_to_check < 5.0) {
-    model_df[model_df$Performance_measure == "LR_positive_class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Minimally_acceptable_performance",]$Weight
+    model_df[model_df$Performance_measure == "LR_positive_cipa_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Minimally_acceptable_performance",]$Weight
   } else if (score_to_check >= 5.0 & score_to_check < 10.0) {
-    model_df[model_df$Performance_measure == "LR_positive_class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Good_performance",]$Weight
+    model_df[model_df$Performance_measure == "LR_positive_cipa_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Good_performance",]$Weight
   } else {
-    model_df[model_df$Performance_measure == "LR_positive_class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Excellent_performance",]$Weight
+    model_df[model_df$Performance_measure == "LR_positive_cipa_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Excellent_performance",]$Weight
   }
   
-  # LR_positive_class_3
-  score_to_check <- quantile(pmeasures$LR_positive_class_3, 0.025)
+  # LR_positive_cipa_2
+  score_to_check <- quantile(pmeasures$LR_positive_cipa_2, 0.025)
   if (score_to_check < 2.0) {
-    model_df[model_df$Performance_measure == "LR_positive_class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
+    model_df[model_df$Performance_measure == "LR_positive_cipa_2",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
   } else if (score_to_check >= 2.0 & score_to_check < 5.0) {
-    model_df[model_df$Performance_measure == "LR_positive_class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Minimally_acceptable_performance",]$Weight
+    model_df[model_df$Performance_measure == "LR_positive_cipa_2",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Minimally_acceptable_performance",]$Weight
   } else if (score_to_check >= 5.0 & score_to_check < 10.0) {
-    model_df[model_df$Performance_measure == "LR_positive_class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Good_performance",]$Weight
+    model_df[model_df$Performance_measure == "LR_positive_cipa_2",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Good_performance",]$Weight
   } else {
-    model_df[model_df$Performance_measure == "LR_positive_class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Excellent_performance",]$Weight
+    model_df[model_df$Performance_measure == "LR_positive_cipa_2",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Excellent_performance",]$Weight
   }
   
-  # LR_negative_class_1
-  score_to_check <- quantile(pmeasures$LR_negative_class_1, 0.975)
+  # LR_negative_cipa_1
+  score_to_check <- quantile(pmeasures$LR_negative_cipa_1, 0.975)
   if (score_to_check > 0.5) {
-    model_df[model_df$Performance_measure == "LR_negative_class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
+    model_df[model_df$Performance_measure == "LR_negative_cipa_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
   } else if (score_to_check <= 0.5 & score_to_check > 0.2) {
-    model_df[model_df$Performance_measure == "LR_negative_class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Minimally_acceptable_performance",]$Weight
+    model_df[model_df$Performance_measure == "LR_negative_cipa_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Minimally_acceptable_performance",]$Weight
   } else if (score_to_check <= 0.2 & score_to_check > 0.1) {
-    model_df[model_df$Performance_measure == "LR_negative_class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Good_performance",]$Weight
+    model_df[model_df$Performance_measure == "LR_negative_cipa_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Good_performance",]$Weight
   } else {
-    model_df[model_df$Performance_measure == "LR_negative_class_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Excellent_performance",]$Weight
+    model_df[model_df$Performance_measure == "LR_negative_cipa_1",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Excellent_performance",]$Weight
   }
   
-  # LR_negative_class_3
-  score_to_check <- quantile(pmeasures$LR_negative_class_3, 0.975)
+  # LR_negative_cipa_2
+  score_to_check <- quantile(pmeasures$LR_negative_cipa_2, 0.975)
   if (score_to_check > 0.5) {
-    model_df[model_df$Performance_measure == "LR_negative_class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
+    model_df[model_df$Performance_measure == "LR_negative_cipa_2",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Not_acceptabel",]$Weight
   } else if (score_to_check <= 0.5 & score_to_check > 0.2) {
-    model_df[model_df$Performance_measure == "LR_negative_class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Minimally_acceptable_performance",]$Weight
+    model_df[model_df$Performance_measure == "LR_negative_cipa_2",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Minimally_acceptable_performance",]$Weight
   } else if (score_to_check <= 0.2 & score_to_check > 0.1) {
-    model_df[model_df$Performance_measure == "LR_negative_class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Good_performance",]$Weight
+    model_df[model_df$Performance_measure == "LR_negative_cipa_2",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Good_performance",]$Weight
   } else {
-    model_df[model_df$Performance_measure == "LR_negative_class_3",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Excellent_performance",]$Weight
+    model_df[model_df$Performance_measure == "LR_negative_cipa_2",]$Performance_level_weight <- pl_df[pl_df$Performance_level == "Excellent_performance",]$Weight
   }
   
   # Pairwise
