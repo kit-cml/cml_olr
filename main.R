@@ -39,7 +39,7 @@ filepath_testing <- "data/manual_testing.csv"
 num_tests <- 1
 
 # Set feature dimension
-dimension <- 2
+dimension <- 1
 
 # Create pairsdf with all unique combinations
 pairsdf <- pairsdfinitfun(features = features, units = units, dimension = dimension)

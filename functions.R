@@ -451,6 +451,8 @@ run_all_training <- function(results_folder = 'results',
   mod <- fit_results$mod
   alphas <- as.numeric(mod$zeta)  # Alpha values
   betas <- as.numeric(mod$coefficients)  # Beta coefficients for all features
+  all_data <- cbind(all_data,predict(mod, newdata = all_data, type = "probs"))
+  all_data["pred"] <- predict(mod, newdata = all_data, type = "class")
   converged <- fit_results$converged
   all_or_loocv <- TRUE
   if (dimension == 2) {
@@ -503,19 +505,18 @@ run_all_training <- function(results_folder = 'results',
   # Calculate the pmeasures for the whole dataset
   training_drugs <- unique(training$drug_name)
   testing_drugs <- unique(testing$drug_name)
-  training <- subset(all_data, all_data$drug_name %in% training_drugs)
-  testing <- subset(all_data, all_data$drug_name %in% testing_drugs)
-  training$is_training <- 1
-  testing$is_training <- 0
+  # training <- subset(all_data, all_data$drug_name %in% training_drugs)
+  # testing <- subset(all_data, all_data$drug_name %in% testing_drugs)
+  # training$is_training <- 1
+  # testing$is_training <- 0
+  # training_drugs <- unique(training$drug_name)
+  # testing_drugs <- unique(testing$drug_name)
+  all_data$is_training <- ifelse(all_data$drug_name %in% training_drugs, 1, 0)
   for (sample_id in training$Sample_ID[training$drug_name == training_drugs[1]]) {
-    temp_training <- subset(training, training$Sample_ID == sample_id)
-    temp_testing <- subset(testing, testing$Sample_ID == sample_id)
-    temppmeasure <- pmeasuresfun(training_data = temp_training,
-                                 test_data = temp_testing,
-                                 mod = mod,
-                                 label_values = values,
-                                 tms_name = tms_name,
-                                 is_whole = FALSE)
+    temp_data <- subset(all_data, all_data$Sample_ID == sample_id)
+    temppmeasure <- pmeasuresfun_loocv(data = temp_data,
+                                       label_values = values,
+                                       is_whole = FALSE)
     pmeasures <- rbind(pmeasures,temppmeasure)
   }
 
@@ -916,8 +917,6 @@ pmeasuresfun_loocv <- function(data, label_values, tms_name = "TMS", is_whole = 
   auc_scores <- aucrocfun_loocv(data, label_values)
   
   # Calculate the pairwise classification error
-  # complete_data <- rbind(test_data,training_data)
-  # complete_data["pred"] <- predict(mod, newdata = complete_data, type = "class")
   data["risk_label"] <- as.integer(data$label)
   data["risk_pred"] <- as.integer(data$pred)
   data <- data[,c("Sample_ID","drug_name",tms_name,"risk_label","risk_pred","is_training")]
@@ -1104,7 +1103,7 @@ solvepair <- function(results_folder,
   testing <- read_csv(filepath_testing, show_col_types = FALSE)
 
   # Perform all
-  resultdf <- run_all_loocv(results_folder = results_folder,
+  resultdf <- run_all_training(results_folder = results_folder,
                       training = training,
                       testing = testing,
                       features_vector = features_vector,
