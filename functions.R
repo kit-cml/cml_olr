@@ -172,7 +172,7 @@ run_all <- function(results_folder = 'results',
   # Constants of the TMS
   if (converged) {
     # if (!is_single) {
-      th1 <- -(alphas[1] - alphas[2] ) / 2.0 - log(1.0 - 2.0 * exp(alphas[1] - alphas[2]))
+      th1 <- (alphas[1] - alphas[2] ) / 2.0 - log(1.0 - 2.0 * exp(alphas[1] - alphas[2]))
       th2 <- -th1
 
     # Plot TMS for training dataset
@@ -466,7 +466,7 @@ pmeasuresfun <- function(training_data, test_data, mod, label_values, tms_name =
   fn_class_1 = confusion_matrix[2,1] + confusion_matrix[3,1]
   
   tp_class_2 = confusion_matrix[2,2]
-  tn_class_2 = confusion_matrix[1,2] + confusion_matrix[1,3] + confusion_matrix[3,1] + confusion_matrix[3,3]
+  tn_class_2 = confusion_matrix[1,1] + confusion_matrix[1,3] + confusion_matrix[3,1] + confusion_matrix[3,3]
   fp_class_2 = confusion_matrix[2,1] + confusion_matrix[2,3]
   fn_class_2 = confusion_matrix[1,2] + confusion_matrix[3,2]
   
