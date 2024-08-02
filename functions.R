@@ -172,7 +172,7 @@ run_all <- function(results_folder = 'results',
   # Constants of the TMS
   if (converged) {
     # if (!is_single) {
-      th1 <- (alphas[1] - alphas[2] ) / 2.0 - log(1.0 - 2.0 * exp(alphas[1] - alphas[2]))
+      th1 <- (alphas[2] - alphas[1] ) / 2.0 + log(1.0 - 2.0 * exp(alphas[1] - alphas[2]))
       th2 <- -th1
 
     # Plot TMS for training dataset
